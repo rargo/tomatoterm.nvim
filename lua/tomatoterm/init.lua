@@ -91,10 +91,14 @@ M.switch_buffer = function(next)
   ::loop::
   end
 
-  --print(table.concat(bufs_nr, " "))
+  print(table.concat(bufs_nr, " "))
   if #bufs_nr == 0 then
     --print("no open terminal")
     require("notify")("No other buffers", "info", { title = "Buffer Switch", timeout = 1000, })
+    return
+  end
+
+  if #bufs_nr == 1 then
     return
   end
 
@@ -107,6 +111,8 @@ M.switch_buffer = function(next)
         return
       end
     end
+    require("notify")("Wrap to the first buffer", "info", { title = "Buffer Switch", timeout = 1000, })
+    vim.cmd("b " .. bufs_nr[1])
   else
     table.sort(bufs_nr, function(left, right)
       if (left > right) then
@@ -121,17 +127,8 @@ M.switch_buffer = function(next)
         return
       end
     end
-  end
-
-  if curbuf_is_terminal == true then
+    require("notify")("Wrap to the last buffer ", "info", { title = "Buffer Switch", timeout = 1000, })
     vim.cmd("b " .. bufs_nr[1])
-    return
-  else
-    if next then
-      require("notify")("No next buffer", "info", { title = "Buffer Switch", timeout = 1000, })
-    else
-      require("notify")("No prev buffer", "info", { title = "Buffer Switch", timeout = 1000, })
-    end
   end
 end
 
@@ -169,6 +166,14 @@ M.switch_terminal = function(next)
     return
   end
 
+  if #terminal_bufs_nr == 1 then
+    --no other terminal to be switch
+    if vim.fn.mode() == 'n' then
+      vim.fn.feedkeys('i', 'n')
+    end
+    return
+  end
+
   if next then
     table.sort(terminal_bufs_nr)
     for _, nr in ipairs(terminal_bufs_nr) do
@@ -178,6 +183,8 @@ M.switch_terminal = function(next)
         return
       end
     end
+    require("notify")("Wrap to the first terminal", "info", { title = "Terminal Switch", timeout = 1000, })
+    vim.cmd("b " .. terminal_bufs_nr[1])
   else
     table.sort(terminal_bufs_nr, function(left, right)
       if (left > right) then
@@ -191,31 +198,23 @@ M.switch_terminal = function(next)
         return
       end
     end
+    require("notify")("Wrap to the Last terminal", "info", { title = "Terminal Switch", timeout = 1000, })
+    vim.cmd("b " .. terminal_bufs_nr[1])
   end
 
-  if curbuf_is_terminal == false then
-      vim.cmd("b " .. terminal_bufs_nr[1])
-      return
-  else
-    if next then
-      require("notify")("No next terminal", "info", { title = "Terminal Switch", timeout = 1000, })
-    else
-      require("notify")("No prev terminal", "info", { title = "Terminal Switch", timeout = 1000, })
-    end
-    -- need to feedkeys, becase keymaps will go back to normal mode, and the terminal event will not trigger
-    if vim.fn.mode() == 'n' then
-      vim.fn.feedkeys('i', 'n')
-    end
-  end
+  -- need to feedkeys, becase keymaps will go back to normal mode, and the terminal event will not trigger
+  -- if vim.fn.mode() == 'n' then
+  --   vim.fn.feedkeys('i', 'n')
+  -- end
 end
 
 M.switch_buffer_terminal = function(next)
   local curbuf_is_terminal = false
   if string.match(vim.api.nvim_buf_get_name(0), "term://") ~= nil then
-    print("curbuf_is_terminal true")
+    --print("curbuf_is_terminal true")
     curbuf_is_terminal = true
   else
-    print("curbuf_is_terminal false")
+    --print("curbuf_is_terminal false")
   end
 
   if curbuf_is_terminal == true then
