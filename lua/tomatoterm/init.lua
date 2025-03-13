@@ -10,11 +10,11 @@ M.term_job_id = {}
 local group = vim.api.nvim_create_augroup('tomatoterm', {})
 
 local function au(typ, pattern, cmdOrFn)
-	if type(cmdOrFn) == 'function' then
-		vim.api.nvim_create_autocmd(typ, { pattern = pattern, callback = cmdOrFn, group = group })
-	else
-		vim.api.nvim_create_autocmd(typ, { pattern = pattern, command = cmdOrFn, group = group })
-	end
+  if type(cmdOrFn) == 'function' then
+    vim.api.nvim_create_autocmd(typ, { pattern = pattern, callback = cmdOrFn, group = group })
+  else
+    vim.api.nvim_create_autocmd(typ, { pattern = pattern, command = cmdOrFn, group = group })
+  end
 end
 
 local keymap_default_options = {noremap = true, silent = true}
@@ -32,6 +32,13 @@ local function tmap(key, command, option)
     option = keymap_default_options
   end
   vim.api.nvim_set_keymap('t', key, command, option)
+end
+
+local function vmap(key, command, option)
+  if (option == nil) then
+    option = keymap_default_options
+  end
+  vim.api.nvim_set_keymap('v', key, command, option)
 end
 
 local function DP(text)
@@ -68,8 +75,13 @@ M.send_to_terminal = function(switch_to_terminal)
   local col_start = vim.fn.col("'<")
   local col_end = vim.fn.col("'>")
 
-  local line_text = table.concat(vim.fn.getline(line_start, line_end), "\n") .. "\n"
-  --DP(line_text)
+  local line_text=""
+  if line_start == line_end then
+    -- one line
+    line_text = vim.fn.strcharpart(vim.fn.getline(line_start), col_start-1, col_end-col_start+1) .. "\n"
+  else
+    line_text = table.concat(vim.fn.getline(line_start, line_end), "\n") .. "\n"
+  end
 
   vim.api.nvim_chan_send(first_terminal_chan_id, line_text)
   if switch_to_terminal then
