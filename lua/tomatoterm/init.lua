@@ -345,6 +345,9 @@ M.setup = function()
   nmap('<C-t>', '<cmd>lua require("tomatoterm").buffer_terminal_toggle()<cr>')
   nmap('<C-n>', '<cmd>lua require("tomatoterm").switch_buffer_terminal(true)<cr>')
   nmap('<C-p>', '<cmd>lua require("tomatoterm").switch_buffer_terminal(false)<cr>')
+
+  -- send visual select text to terminal run:
+  vmap('s', "<ESC><cmd>lua require('tomatoterm').send_to_terminal(true)<CR>")
 end
 
 return M
