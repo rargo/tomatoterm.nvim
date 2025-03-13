@@ -1,5 +1,12 @@
 local M = {}
 
+M.debug = false
+
+M.next_term_no = 1
+
+M.term_list = {}
+M.term_job_id = {}
+
 local group = vim.api.nvim_create_augroup('tomatoterm', {})
 
 local function au(typ, pattern, cmdOrFn)
@@ -27,17 +34,23 @@ local function tmap(key, command, option)
   vim.api.nvim_set_keymap('t', key, command, option)
 end
 
+local function DP(text)
+  if M.debug then
+    print(text)
+  end
+end
+
 M.send_to_terminal = function(switch_to_terminal)
   terminal_chans = {}
   for _, chan in pairs(vim.api.nvim_list_chans()) do
-    --M.print_table(chan)
+    --M.dp_table(chan)
     if chan["mode"] == "terminal" and chan["pty"] ~= "" then
       table.insert(terminal_chans, chan)
     end
   end
 
   if #terminal_chans == 0 then
-    print("no open terminals")
+    DP("no open terminals")
     return
   end
 
@@ -56,7 +69,7 @@ M.send_to_terminal = function(switch_to_terminal)
   local col_end = vim.fn.col("'>")
 
   local line_text = table.concat(vim.fn.getline(line_start, line_end), "\n") .. "\n"
-  --print(line_text)
+  --DP(line_text)
 
   vim.api.nvim_chan_send(first_terminal_chan_id, line_text)
   if switch_to_terminal then
@@ -65,6 +78,7 @@ M.send_to_terminal = function(switch_to_terminal)
 end
 
 M.switch_buffer = function(next)
+  --DP("switch_buffer")
   local curbuf_nr = vim.fn.bufnr() 
   local curbuf_is_terminal = false
   local buffers = vim.api.nvim_list_bufs()
@@ -83,7 +97,7 @@ M.switch_buffer = function(next)
       goto loop
     end
 
-    --print("buffer " .. bufnr .. " name:" .. name)
+    --DP("buffer " .. bufnr .. " name:" .. name)
     if string.match(name, "term://") == nil then
       table.insert(bufs_nr, bufnr)
     end
@@ -91,14 +105,15 @@ M.switch_buffer = function(next)
   ::loop::
   end
 
-  print(table.concat(bufs_nr, " "))
+  --DP(table.concat(bufs_nr, " "))
   if #bufs_nr == 0 then
-    --print("no open terminal")
-    require("notify")("No other buffers", "info", { title = "Buffer Switch", timeout = 1000, })
+    --DP("no open terminal")
+    require("notify")("No buffer open", "info", { title = "Buffer Switch", timeout = 1000, })
     return
   end
 
   if #bufs_nr == 1 then
+    require("notify")("No other buffers ", "info", { title = "Buffer Switch", timeout = 1000, })
     return
   end
 
@@ -132,7 +147,39 @@ M.switch_buffer = function(next)
   end
 end
 
+local function do_switch_terminal(bufnr, wrap)
+  local term_no = M.term_list[bufnr]
+  local info = "Terminal "
+  if term_no ~= nil then
+    info = info .. term_no
+  end
+
+  local job_id = M.term_job_id[bufnr]
+  if job_id ~= nil then
+    local pid = vim.fn.jobpid(job_id)
+    local cmd = "ps -p " .. pid .. " -o comm="
+    local h = io.popen(cmd)
+    local process_name = h:read("*a")
+    h:close()
+    process_name = string.gsub(process_name, "\n","")
+    info = info .. " pid:" .. pid ..  " " .. process_name
+  end
+
+  if wrap ~= nil then
+    if wrap == "wrap_first" then
+      info = info .. " (WRAP FIRST)"
+    else 
+      if wrap == "wrap_last" then
+        info = info .. " (WRAP LAST)"
+      end
+    end
+  end
+  require("notify")(info, "info", { title = "Terminal Switch", timeout = 1000, })
+  vim.cmd("b " .. bufnr)
+end
+
 M.switch_terminal = function(next)
+  --DP("switch_terminal")
   local curbuf_nr = vim.fn.bufnr() 
   local curbuf_is_terminal = false
   local buffers = vim.api.nvim_list_bufs()
@@ -140,14 +187,14 @@ M.switch_terminal = function(next)
   local terminal_bufs_nr = {}
 
   if string.match(vim.api.nvim_buf_get_name(0), "term://") ~= nil then
-    print("current is terminal")
+    DP("current is terminal")
     curbuf_is_terminal = true
   end
   
   for _, buf in ipairs(buffers) do
     local bufnr = vim.fn.bufnr(buf)
     local name = vim.api.nvim_buf_get_name(buf)
-    --print("buffer " .. bufnr .. " name:" .. name)
+    --DP("buffer " .. bufnr .. " name:" .. name)
 
     if vim.fn.buflisted(buf) == 0 then
       goto loop
@@ -161,14 +208,17 @@ M.switch_terminal = function(next)
   end
 
   if #terminal_bufs_nr == 0 then
-    --print("no open terminal")
-    require("notify")("No open terminals", "info", { title = "Terminal Switch", timeout = 1000, })
+    --DP("no open terminal")
+    require("notify")("No terminal open", "info", { title = "Terminal Switch", timeout = 1000, })
     return
   end
 
   if #terminal_bufs_nr == 1 then
+    require("notify")("No other terminal ", "info", { title = "Buffer Switch", timeout = 1000, })
     --no other terminal to be switch
     if vim.fn.mode() == 'n' then
+      -- need to feedkeys, becase tmap key switch back to normal mode, 
+      -- and no buffer switch, so there is no TermEnter event trigger
       vim.fn.feedkeys('i', 'n')
     end
     return
@@ -179,12 +229,12 @@ M.switch_terminal = function(next)
     for _, nr in ipairs(terminal_bufs_nr) do
       -- jump to the next terminal which bufnr is right after current buffer
       if nr > curbuf_nr then
-        vim.cmd("b " .. nr)
+        do_switch_terminal(nr)
         return
       end
     end
-    require("notify")("Wrap to the first terminal", "info", { title = "Terminal Switch", timeout = 1000, })
-    vim.cmd("b " .. terminal_bufs_nr[1])
+    local nr = terminal_bufs_nr[1]
+    do_switch_terminal(nr, "wrap_first")
   else
     table.sort(terminal_bufs_nr, function(left, right)
       if (left > right) then
@@ -194,12 +244,12 @@ M.switch_terminal = function(next)
     )
     for _, nr in ipairs(terminal_bufs_nr) do
       if nr < curbuf_nr then
-        vim.cmd("b " .. nr)
+        do_switch_terminal(nr)
         return
       end
     end
-    require("notify")("Wrap to the Last terminal", "info", { title = "Terminal Switch", timeout = 1000, })
-    vim.cmd("b " .. terminal_bufs_nr[1])
+    local nr = terminal_bufs_nr[1]
+    do_switch_terminal(nr, "wrap_last")
   end
 
   -- need to feedkeys, becase keymaps will go back to normal mode, and the terminal event will not trigger
@@ -209,15 +259,7 @@ M.switch_terminal = function(next)
 end
 
 M.switch_buffer_terminal = function(next)
-  local curbuf_is_terminal = false
   if string.match(vim.api.nvim_buf_get_name(0), "term://") ~= nil then
-    --print("curbuf_is_terminal true")
-    curbuf_is_terminal = true
-  else
-    --print("curbuf_is_terminal false")
-  end
-
-  if curbuf_is_terminal == true then
     M.switch_terminal(next)
   else
     M.switch_buffer(next)
@@ -225,56 +267,84 @@ M.switch_buffer_terminal = function(next)
 end
 
 M.buffer_terminal_toggle = function()
+  DP("buffer_terminal_toggle")
   if string.match(vim.api.nvim_buf_get_name(0), "term://") ~= nil then
     if M.prev_buffer_bufnr ~= nil then
+      DP("111 " .. M.prev_buffer_bufnr)
       vim.cmd("b " .. M.prev_buffer_bufnr)
     else
+      DP("222")
       M.switch_buffer(true)
     end
   else
     if M.prev_terminal_bufnr ~= nil then
+      DP("33" .. M.prev_terminal_bufnr)
       vim.cmd("b " .. M.prev_terminal_bufnr)
     else
+      DP("44")
       M.switch_terminal(true)
     end
   end
+end
 
+local function OnTermOpen()
+  if string.match(vim.api.nvim_buf_get_name(0), "term://") ~= nil then
+    local bufnr = vim.fn.bufnr()
+    DP("@ buf event add terminal " .. bufnr)
+    vim.b.term_no = M.next_term_no
+    M.term_list[bufnr] = M.next_term_no
+    M.next_term_no = M.next_term_no + 1
+
+    M.term_job_id[bufnr] = vim.b.terminal_job_id
+
+    M.prev_terminal_bufnr = bufnr
+  end
+  if (vim.fn.mode() ~= 't' and (vim.b.term_mode == false or vim.b.term_mode == nil)) then
+    vim.fn.feedkeys('i', 'n');
+    vim.b.term_mode = true
+  end
+end
+
+local function OnTermLeave()
+  vim.b.term_mode = false
+end
+
+local function OnBufEnter_term()
+  if (vim.fn.mode() ~= 't' and (vim.b.term_mode == false or vim.b.term_mode == nil)) then
+    vim.fn.feedkeys('i', 'n');
+    vim.b.term_mode = true
+  end
+end
+
+local function OnBufEnter_all()
+  DP(vim.api.nvim_buf_get_name(0))
+  if string.match(vim.api.nvim_buf_get_name(0), "term://") ~= nil then
+    DP("buf event add terminal " .. vim.fn.bufnr())
+    M.prev_terminal_bufnr = vim.fn.bufnr()
+  else
+    --if vim.fn.mode() ~= 't' then
+    -- first terminal open will trigger BufEnter with buffer name is ""
+    if vim.api.nvim_buf_get_name(0) ~= "" then
+      DP("buf event add buffer " .. vim.fn.bufnr())
+      M.prev_buffer_bufnr = vim.fn.bufnr()
+    end
+  end
 end
 
 M.setup = function()
-  au({'TermOpen'}, 'term://*', function()
-    if (vim.fn.mode() ~= 't' and (vim.b.term_mode == false or vim.b.term_mode == nil)) then
-      vim.fn.feedkeys('i', 'n');
-      vim.b.term_mode = true
-    end
-    --vim.cmd("setlocal statusline=%{b:term_title}")
-  end)
-
-  au({ 'BufEnter'}, 'term://*', function()
-    if (vim.fn.mode() ~= 't' and (vim.b.term_mode == false or vim.b.term_mode == nil)) then
-      vim.fn.feedkeys('i', 'n');
-      vim.b.term_mode = true
-    end
-  end)
-
-  au({ 'BufEnter'}, '*', function()
-    if string.match(vim.api.nvim_buf_get_name(0), "term://") ~= nil then
-      M.prev_terminal_bufnr = vim.fn.bufnr()
-    else
-      M.prev_buffer_bufnr = vim.fn.bufnr()
-    end
-  end)
-
-  au({'TermLeave'}, 'term://*', function()
-    vim.b.term_mode = false
-  end)
+  DP("tomatoterm setup")
+  au({'TermOpen'}, 'term://*', OnTermOpen)
+  au({'TermLeave'}, 'term://*', OnTermLeave)
+  au({'BufEnter'}, 'term://*', OnBufEnter_term)
+  au({'BufEnter'}, '*', OnBufEnter_all)
 
   tmap('<C-t>', '<C-\\><C-N><cmd>lua require("tomatoterm").buffer_terminal_toggle()<cr>')
+  tmap('<C-n>', '<C-\\><C-N><cmd>lua require("tomatoterm").switch_buffer_terminal(true)<cr>')
+  tmap('<C-p>', '<C-\\><C-N><cmd>lua require("tomatoterm").switch_buffer_terminal(false)<cr>')
+
   nmap('<C-t>', '<cmd>lua require("tomatoterm").buffer_terminal_toggle()<cr>')
   nmap('<C-n>', '<cmd>lua require("tomatoterm").switch_buffer_terminal(true)<cr>')
   nmap('<C-p>', '<cmd>lua require("tomatoterm").switch_buffer_terminal(false)<cr>')
-  tmap('<C-n>', '<C-\\><C-N><cmd>lua require("tomatoterm").switch_buffer_terminal(true)<cr>')
-  tmap('<C-p>', '<C-\\><C-N><cmd>lua require("tomatoterm").switch_buffer_terminal(false)<cr>')
 end
 
 return M
