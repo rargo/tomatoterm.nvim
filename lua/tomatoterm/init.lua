@@ -57,7 +57,7 @@ M.send_to_terminal = function(switch_to_terminal)
   end
 
   if #terminal_chans == 0 then
-    DP("no open terminals")
+    require("notify")("No terminal open", "info", { title = "Send to terminal", timeout = 1000, })
     return
   end
 
@@ -125,8 +125,10 @@ M.switch_buffer = function(next)
   end
 
   if #bufs_nr == 1 then
-    require("notify")("No other buffers ", "info", { title = "Buffer Switch", timeout = 1000, })
-    return
+    if curbuf_is_terminal == false then
+      require("notify")("No other buffers ", "info", { title = "Buffer Switch", timeout = 1000, })
+      return
+    end
   end
 
   if next then
@@ -161,9 +163,9 @@ end
 
 local function do_switch_terminal(bufnr, wrap)
   local term_no = M.term_list[bufnr]
-  local info = "Terminal "
+  local info = "Terminal"
   if term_no ~= nil then
-    info = info .. term_no
+    info = info .. " " .. term_no
   end
 
   local job_id = M.term_job_id[bufnr]
@@ -174,15 +176,15 @@ local function do_switch_terminal(bufnr, wrap)
     local process_name = h:read("*a")
     h:close()
     process_name = string.gsub(process_name, "\n","")
-    info = info .. " pid:" .. pid ..  " " .. process_name
+    info = info .. " " .. process_name .. "(" .. pid ..  ")"
   end
 
   if wrap ~= nil then
     if wrap == "wrap_first" then
-      info = info .. " (WRAP FIRST)"
+      info = info .. " (FIRST buffer)"
     else 
       if wrap == "wrap_last" then
-        info = info .. " (WRAP LAST)"
+        info = info .. " (LAST buffer)"
       end
     end
   end
@@ -226,14 +228,16 @@ M.switch_terminal = function(next)
   end
 
   if #terminal_bufs_nr == 1 then
-    require("notify")("No other terminal ", "info", { title = "Buffer Switch", timeout = 1000, })
-    --no other terminal to be switch
-    if vim.fn.mode() == 'n' then
-      -- need to feedkeys, becase tmap key switch back to normal mode, 
-      -- and no buffer switch, so there is no TermEnter event trigger
-      vim.fn.feedkeys('i', 'n')
+    if curbuf_is_terminal == true then
+      require("notify")("No other terminal ", "info", { title = "Buffer Switch", timeout = 1000, })
+      --no other terminal to be switch
+      if vim.fn.mode() == 'n' then
+        -- need to feedkeys, becase tmap key switch back to normal mode, 
+        -- and no buffer switch, so there is no TermEnter event trigger
+        vim.fn.feedkeys('i', 'n')
+      end
+      return
     end
-    return
   end
 
   if next then
@@ -283,7 +287,12 @@ M.buffer_terminal_toggle = function()
   if string.match(vim.api.nvim_buf_get_name(0), "term://") ~= nil then
     if M.prev_buffer_bufnr ~= nil then
       DP("111 " .. M.prev_buffer_bufnr)
-      vim.cmd("b " .. M.prev_buffer_bufnr)
+      if vim.fn.buflisted(M.prev_buffer_bufnr) ~= 0 then
+        vim.cmd("b " .. M.prev_buffer_bufnr)
+      else
+        require("notify")("Alternate buf not existed, switch to next buffer", "info", { title = "Buffer Switch", timeout = 1000, })
+        M.switch_buffer(true)
+      end
     else
       DP("222")
       M.switch_buffer(true)
@@ -291,7 +300,12 @@ M.buffer_terminal_toggle = function()
   else
     if M.prev_terminal_bufnr ~= nil then
       DP("33" .. M.prev_terminal_bufnr)
-      vim.cmd("b " .. M.prev_terminal_bufnr)
+      if vim.fn.buflisted(M.prev_terminal_bufnr) ~= 0 then
+        vim.cmd("b " .. M.prev_terminal_bufnr)
+      else
+        require("notify")("Alternate terminal not existed, switch to next terminal", "info", { title = "Terminal Switch", timeout = 1000, })
+        M.switch_terminal(true)
+      end
     else
       DP("44")
       M.switch_terminal(true)
@@ -318,6 +332,9 @@ local function OnTermOpen()
 end
 
 local function OnTermLeave()
+
+  -- TODO 
+  -- on term leave, nerdtree windows will cover the whole screen
   vim.b.term_mode = false
 end
 
