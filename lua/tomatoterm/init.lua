@@ -4,8 +4,7 @@ M.debug = false
 
 M.next_term_no = 1
 
-M.term_list = {}
-M.term_job_id = {}
+M.terminals = {}
 
 local group = vim.api.nvim_create_augroup('tomatoterm', {})
 
@@ -162,13 +161,15 @@ M.switch_buffer = function(next)
 end
 
 local function do_switch_terminal(bufnr, wrap)
-  local term_no = M.term_list[bufnr]
+  local terminal = M.terminals[bufnr]
+  local term_no = terminal.no
+  local job_id = terminal.job_id
+
   local info = "Terminal"
   if term_no ~= nil then
     info = info .. " " .. term_no
   end
 
-  local job_id = M.term_job_id[bufnr]
   if job_id ~= nil then
     local pid = vim.fn.jobpid(job_id)
     local cmd = "ps -p " .. pid .. " -o comm="
@@ -318,11 +319,19 @@ local function OnTermOpen()
     local bufnr = vim.fn.bufnr()
     DP("@ buf event add terminal " .. bufnr)
     vim.b.term_no = M.next_term_no
-    M.term_list[bufnr] = M.next_term_no
+    local terminal = {}
+
+    terminal.no = M.next_term_no
+    terminal.job_id = vim.b.terminal_job_id
+
     M.next_term_no = M.next_term_no + 1
 
-    M.term_job_id[bufnr] = vim.b.terminal_job_id
+    -- vim.ui.input({ prompt = 'Enter terminal name: ' }, function(input)
+    --   terminal.name = input
+    -- end)
+    -- terminal.name = vim.fn.input("Enter terminal name")
 
+    M.terminals[bufnr] = terminal
     M.prev_terminal_bufnr = bufnr
   end
   if (vim.fn.mode() ~= 't' and (vim.b.term_mode == false or vim.b.term_mode == nil)) then
