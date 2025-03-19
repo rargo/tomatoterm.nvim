@@ -1,7 +1,7 @@
 local M = {}
 
---M.debug = false
-M.debug = true
+M.debug = false
+--M.debug = true
 
 M.next_term_no = 1
 
