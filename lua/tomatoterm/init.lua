@@ -1,6 +1,7 @@
 local M = {}
 
-M.debug = false
+--M.debug = false
+M.debug = true
 
 M.next_term_no = 1
 
@@ -284,10 +285,8 @@ M.switch_buffer_terminal = function(next)
 end
 
 M.buffer_terminal_toggle = function()
-  DP("buffer_terminal_toggle")
   if string.match(vim.api.nvim_buf_get_name(0), "term://") ~= nil then
     if M.prev_buffer_bufnr ~= nil then
-      DP("111 " .. M.prev_buffer_bufnr)
       if vim.fn.buflisted(M.prev_buffer_bufnr) ~= 0 then
         vim.cmd("b " .. M.prev_buffer_bufnr)
       else
@@ -295,29 +294,34 @@ M.buffer_terminal_toggle = function()
         M.switch_buffer(true)
       end
     else
-      DP("222")
       M.switch_buffer(true)
     end
   else
     if M.prev_terminal_bufnr ~= nil then
-      DP("33" .. M.prev_terminal_bufnr)
       if vim.fn.buflisted(M.prev_terminal_bufnr) ~= 0 then
         vim.cmd("b " .. M.prev_terminal_bufnr)
+        if vim.fn.mode() == 'n' then
+          vim.fn.feedkeys('i', 'n')
+        end
       else
         require("notify")("Alternate terminal not existed, switch to next terminal", "info", { title = "Terminal Switch", timeout = 1000, })
         M.switch_terminal(true)
       end
     else
-      DP("44")
       M.switch_terminal(true)
     end
   end
 end
 
+-- automatically change to insert mode in terminal windows
+
+
 local function OnTermOpen()
-  if string.match(vim.api.nvim_buf_get_name(0), "term://") ~= nil then
-    local bufnr = vim.fn.bufnr()
-    DP("@ buf event add terminal " .. bufnr)
+  local bufname = vim.api.nvim_buf_get_name(0)
+  local bufnr = vim.fn.bufnr()
+  DP("-------------------------------")
+  DP("OnTermOpen bufnr:" .. bufnr .. " name:" .. bufname)
+  if string.match(bufname, "term://") ~= nil then
     vim.b.term_no = M.next_term_no
     local terminal = {}
 
@@ -333,48 +337,86 @@ local function OnTermOpen()
 
     M.terminals[bufnr] = terminal
     M.prev_terminal_bufnr = bufnr
+    DP("OnTermOpen add terminal, term_no:" .. terminal.no)
+    DP("OnTermOpen set prev_terminal_bufnr to " .. bufnr)
   end
-  if (vim.fn.mode() ~= 't' and (vim.b.term_mode == false or vim.b.term_mode == nil)) then
+  --if (vim.fn.mode() ~= 't' and (vim.b.term_mode == false or vim.b.term_mode == nil)) then
+  if vim.fn.mode() ~= 't' then
+    DP("OnTermOpen feedkeys i")
     vim.fn.feedkeys('i', 'n');
-    vim.b.term_mode = true
+    --vim.b.term_mode = true
   end
+  M.prev_buffer_is_terminal = true
 end
 
+-- TODO 
+-- on term leave, nerdtree windows will cover the whole screen
 local function OnTermLeave()
-
-  -- TODO 
-  -- on term leave, nerdtree windows will cover the whole screen
-  vim.b.term_mode = false
+  local bufname = vim.api.nvim_buf_get_name(0)
+  local bufnr = vim.fn.bufnr()
+  local mode = vim.fn.mode() 
+  DP("-------------------------------")
+  DP("OnTermLeave mode:" .. mode .. " bufnr:" .. bufnr .. " name:" .. bufname)
+  --vim.b.term_mode = false
+  DP("")
 end
 
-local function OnBufEnter_term()
-  if (vim.fn.mode() ~= 't' and (vim.b.term_mode == false or vim.b.term_mode == nil)) then
-    vim.fn.feedkeys('i', 'n');
-    vim.b.term_mode = true
-  end
+-- note: switch from non terminal to terminal win trigger OnWinEnter_term event,
+-- switch from terminal to terminal WON'T trigger OnWinEnter_term event
+local function OnWinEnter_term()
+  local bufname = vim.api.nvim_buf_get_name(0)
+  local bufnr = vim.fn.bufnr()
+  local mode = vim.fn.mode() 
+  DP("-------------------------------")
+  DP("OnWinEnter_term mode:" .. mode .. " bufnr:" .. bufnr .. " name:" .. bufname)
+  DP("OnWinEnter_term feedkeys i")
+  vim.fn.feedkeys('i', 'n');
 end
 
 local function OnBufEnter_all()
-  DP(vim.api.nvim_buf_get_name(0))
+  local bufname = vim.api.nvim_buf_get_name(0)
+  local bufnr = vim.fn.bufnr()
+  local mode = vim.fn.mode() 
+  DP("-------------------------------")
+  DP("OnBufEnter_all mode:" .. mode .. " bufnr:" .. bufnr .. " name:" .. bufname)
   if string.match(vim.api.nvim_buf_get_name(0), "term://") ~= nil then
-    DP("buf event add terminal " .. vim.fn.bufnr())
+    DP("OnBufEnter_all is terminal")
+    DP("OnBufEnter_all set prev_buffer_bufnr to " .. bufnr)
     M.prev_terminal_bufnr = vim.fn.bufnr()
+    if M.prev_buffer_is_terminal == true then
+      -- since switch from terminal to terminal WON'T trigger OnWinEnter_term event, 
+      -- we check if last buffer is also terminal, if so, feedkeys to enter terminal mode
+      DP("OnBufEnter_all prev buffer is terminal, feedkeys i" .. bufnr)
+      vim.fn.feedkeys('i', 'n');
+    end
+    M.prev_buffer_is_terminal = true
   else
+
+    -- switch from terminal to buffer, because terminal mode is insert mode
+    -- need to feedkeys to go back normal mode
+    M.prev_buffer_is_terminal = false
+    DP("OnBufEnter_all is buffer")
     --if vim.fn.mode() ~= 't' then
     -- first terminal open will trigger BufEnter with buffer name is ""
     if vim.api.nvim_buf_get_name(0) ~= "" then
-      DP("buf event add buffer " .. vim.fn.bufnr())
+      DP("OnBufEnter_all set prev_buffer_bufnr to " .. bufnr)
       M.prev_buffer_bufnr = vim.fn.bufnr()
     end
+
+    -- TODO, back to normal mode
+    -- if mode == "i" then
+    --   vim.fn.feedkeys("<C-[>", 'n');
+    -- end
   end
+  DP("")
 end
 
 M.setup = function()
   DP("tomatoterm setup")
   au({'TermOpen'}, 'term://*', OnTermOpen)
   au({'TermLeave'}, 'term://*', OnTermLeave)
-  au({'BufEnter'}, 'term://*', OnBufEnter_term)
   au({'BufEnter'}, '*', OnBufEnter_all)
+  au({'WinEnter'}, 'term://*', OnWinEnter_term)
 
   tmap('<C-t>', '<C-\\><C-N><cmd>lua require("tomatoterm").buffer_terminal_toggle()<cr>')
   tmap('<C-n>', '<C-\\><C-N><cmd>lua require("tomatoterm").switch_buffer_terminal(true)<cr>')
