@@ -320,6 +320,7 @@ end
 
 M.buffer_terminal_toggle = function()
   if string.match(vim.api.nvim_buf_get_name(0), "term://") ~= nil then
+    --last is terminal, switch to a normal buffer
     if M.prev_buffer_bufnr ~= nil then
       if vim.fn.buflisted(M.prev_buffer_bufnr) ~= 0 then
         do_switch_buffer(M.prev_buffer_bufnr)
@@ -331,6 +332,7 @@ M.buffer_terminal_toggle = function()
       switch_buffer(true)
     end
   else
+    --last is normal buffer, switch to a terminal
     if M.prev_terminal_bufnr ~= nil then
       if vim.fn.buflisted(M.prev_terminal_bufnr) ~= 0 then
         do_switch_buffer(M.prev_terminal_bufnr, function()
