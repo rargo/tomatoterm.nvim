@@ -47,49 +47,22 @@ local function DP(text)
   end
 end
 
-M.send_to_terminal = function(switch_to_terminal)
-  terminal_chans = {}
-  for _, chan in pairs(vim.api.nvim_list_chans()) do
-    --M.dp_table(chan)
-    if chan["mode"] == "terminal" and chan["pty"] ~= "" then
-      table.insert(terminal_chans, chan)
-    end
-  end
-
-  if #terminal_chans == 0 then
-    require("notify")("No terminal open", "info", { title = "Send to terminal", timeout = 1000, })
-    return
-  end
-
-  -- sort to get the first terminal
-  table.sort(terminal_chans, function(left, right)
-    return left["buffer"] < right["buffer"]
-  end)
-
-  local first_terminal_chan_id = terminal_chans[1]["id"]
-  local first_terminal_buffer_id = terminal_chans[1]["buffer"]
-
-  local line_start = vim.fn.line("'<")
-  local line_end = vim.fn.line("'>")
-
-  local col_start = vim.fn.col("'<")
-  local col_end = vim.fn.col("'>")
-
-  local line_text=""
-  if line_start == line_end then
-    -- one line
-    line_text = vim.fn.strcharpart(vim.fn.getline(line_start), col_start-1, col_end-col_start+1) .. "\n"
+local function do_switch_buffer(bufnr, buf_switch_cb)
+  local wins = vim.fn.win_findbuf(bufnr)
+  if #wins ~= 0 then
+    --jump to window instead of switch buffer
+    local winid = vim.fn.win_getid(wins[1])
+    vim.fn.win_gotoid(wins[1])
+    --vim.cmd(winid .. "wincmd w")
   else
-    line_text = table.concat(vim.fn.getline(line_start, line_end), "\n") .. "\n"
-  end
-
-  vim.api.nvim_chan_send(first_terminal_chan_id, line_text)
-  if switch_to_terminal then
-    vim.cmd("b " .. first_terminal_buffer_id)
+    vim.cmd("b " .. bufnr)
+    if buf_switch_cb ~= nil then
+      buf_switch_cb()
+    end
   end
 end
 
-M.switch_buffer = function(next)
+local function switch_buffer(next)
   --DP("switch_buffer")
   local curbuf_nr = vim.fn.bufnr() 
   local curbuf_is_terminal = false
@@ -136,12 +109,12 @@ M.switch_buffer = function(next)
     for _, nr in ipairs(bufs_nr) do
       -- jump to the next terminal which bufnr is right after current buffer
       if nr > curbuf_nr then
-        vim.cmd("b " .. nr)
+        do_switch_buffer(nr)
         return
       end
     end
     require("notify")("Wrap to the first buffer", "info", { title = "Buffer Switch", timeout = 1000, })
-    vim.cmd("b " .. bufs_nr[1])
+    do_switch_buffer(bufs_nr[1])
   else
     table.sort(bufs_nr, function(left, right)
       if (left > right) then
@@ -152,12 +125,12 @@ M.switch_buffer = function(next)
     for _, nr in ipairs(bufs_nr) do
       -- jump to the next terminal which bufnr is right after current buffer
       if nr < curbuf_nr then
-        vim.cmd("b " .. nr)
+        do_switch_buffer(nr)
         return
       end
     end
     require("notify")("Wrap to the last buffer ", "info", { title = "Buffer Switch", timeout = 1000, })
-    vim.cmd("b " .. bufs_nr[1])
+    do_switch_buffer(bufs_nr[1])
   end
 end
 
@@ -191,10 +164,10 @@ local function do_switch_terminal(bufnr, wrap)
     end
   end
   require("notify")(info, "info", { title = "Terminal Switch", timeout = 1000, })
-  vim.cmd("b " .. bufnr)
+  do_switch_buffer(bufnr)
 end
 
-M.switch_terminal = function(next)
+local function switch_terminal(next)
   --DP("switch_terminal")
   local curbuf_nr = vim.fn.bufnr() 
   local curbuf_is_terminal = false
@@ -279,9 +252,9 @@ end
 
 M.switch_buffer_terminal = function(next)
   if string.match(vim.api.nvim_buf_get_name(0), "term://") ~= nil then
-    M.switch_terminal(next)
+    switch_terminal(next)
   else
-    M.switch_buffer(next)
+    switch_buffer(next)
   end
 end
 
@@ -289,52 +262,76 @@ M.buffer_terminal_toggle = function()
   if string.match(vim.api.nvim_buf_get_name(0), "term://") ~= nil then
     if M.prev_buffer_bufnr ~= nil then
       if vim.fn.buflisted(M.prev_buffer_bufnr) ~= 0 then
-        local wins = vim.fn.win_findbuf(M.prev_buffer_bufnr)
-        if #wins ~= 0 then
-          --jump to window instead of switch buffer
-          local winid = vim.fn.win_getid(wins[1])
-          vim.fn.win_gotoid(wins[1])
-          --vim.cmd(winid .. "wincmd w")
-        else
-          vim.cmd("b " .. M.prev_buffer_bufnr)
-        end
+        do_switch_buffer(M.prev_buffer_bufnr)
       else
         require("notify")("Alternate buf not existed, switch to next buffer", "info", { title = "Buffer Switch", timeout = 1000, })
-        M.switch_buffer(true)
+        switch_buffer(true)
       end
     else
-      M.switch_buffer(true)
+      switch_buffer(true)
     end
   else
     if M.prev_terminal_bufnr ~= nil then
       if vim.fn.buflisted(M.prev_terminal_bufnr) ~= 0 then
-        local wins = vim.fn.win_findbuf(M.prev_terminal_bufnr)
-        if #wins ~= 0 then
-          --jump to window instead of switch buffer
-          local winid = vim.fn.win_getid(wins[1])
-          --vim.fn.win_gotoid(winid)
-          vim.fn.win_gotoid(wins[1])
-          --vim.cmd(winid .. "wincmd w")
-        else
-          vim.cmd("b " .. M.prev_terminal_bufnr)
+        do_switch_buffer(M.prev_terminal_bufnr, function()
           if vim.fn.mode() ~= 'i' then
             DP("switch back to alternate terminal, feedkeys i")
             vim.fn.feedkeys('i', 'n')
           end
-        end
+        end)
       else
         require("notify")("Alternate terminal not existed, switch to next terminal", "info", { title = "Terminal Switch", timeout = 1000, })
-        M.switch_terminal(true)
+        switch_terminal(true)
       end
     else
-      M.switch_terminal(true)
+      switch_terminal(true)
     end
   end
 end
 
+M.send_to_terminal = function(switch_to_terminal)
+  terminal_chans = {}
+  for _, chan in pairs(vim.api.nvim_list_chans()) do
+    --M.dp_table(chan)
+    if chan["mode"] == "terminal" and chan["pty"] ~= "" then
+      table.insert(terminal_chans, chan)
+    end
+  end
+
+  if #terminal_chans == 0 then
+    require("notify")("No terminal open", "info", { title = "Send to terminal", timeout = 1000, })
+    return
+  end
+
+  -- sort to get the first terminal
+  table.sort(terminal_chans, function(left, right)
+    return left["buffer"] < right["buffer"]
+  end)
+
+  local first_terminal_chan_id = terminal_chans[1]["id"]
+  local first_terminal_buffer_id = terminal_chans[1]["buffer"]
+
+  local line_start = vim.fn.line("'<")
+  local line_end = vim.fn.line("'>")
+
+  local col_start = vim.fn.col("'<")
+  local col_end = vim.fn.col("'>")
+
+  local line_text=""
+  if line_start == line_end then
+    -- one line
+    line_text = vim.fn.strcharpart(vim.fn.getline(line_start), col_start-1, col_end-col_start+1) .. "\n"
+  else
+    line_text = table.concat(vim.fn.getline(line_start, line_end), "\n") .. "\n"
+  end
+
+  vim.api.nvim_chan_send(first_terminal_chan_id, line_text)
+  if switch_to_terminal then
+    do_switch_buffer(first_terminal_buffer_id)
+  end
+end
+
 -- automatically change to insert mode in terminal windows
-
-
 local function OnTermOpen()
   local bufname = vim.api.nvim_buf_get_name(0)
   local bufnr = vim.fn.bufnr()
