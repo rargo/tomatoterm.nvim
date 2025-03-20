@@ -163,15 +163,13 @@ end
 
 local function do_switch_terminal(bufnr, wrap)
   local terminal = M.terminals[bufnr]
-  local term_no = terminal.no
-  local job_id = terminal.job_id
-
   local info = "Terminal"
-  if term_no ~= nil then
-    info = info .. " " .. term_no
-  end
+  if terminal ~= nil then
+    local term_no = terminal.no
+    local job_id = terminal.job_id
 
-  if job_id ~= nil then
+    info = info .. " " .. term_no
+
     local pid = vim.fn.jobpid(job_id)
     local cmd = "ps -p " .. pid .. " -o comm="
     local h = io.popen(cmd)
@@ -179,6 +177,8 @@ local function do_switch_terminal(bufnr, wrap)
     h:close()
     process_name = string.gsub(process_name, "\n","")
     info = info .. " " .. process_name .. "(" .. pid ..  ")"
+  else
+    info = info .. " bufnr:" .. bufnr
   end
 
   if wrap ~= nil then
@@ -233,9 +233,10 @@ M.switch_terminal = function(next)
     if curbuf_is_terminal == true then
       require("notify")("No other terminal ", "info", { title = "Buffer Switch", timeout = 1000, })
       --no other terminal to be switch
-      if vim.fn.mode() == 'n' then
+      if vim.fn.mode() ~= 'i' then
         -- need to feedkeys, becase tmap key switch back to normal mode, 
         -- and no buffer switch, so there is no TermEnter event trigger
+        DP("curbuf is the only terminal, feedkeys i")
         vim.fn.feedkeys('i', 'n')
       end
       return
@@ -300,7 +301,8 @@ M.buffer_terminal_toggle = function()
     if M.prev_terminal_bufnr ~= nil then
       if vim.fn.buflisted(M.prev_terminal_bufnr) ~= 0 then
         vim.cmd("b " .. M.prev_terminal_bufnr)
-        if vim.fn.mode() == 'n' then
+        if vim.fn.mode() ~= 'i' then
+          DP("switch back to alternate terminal, feedkeys i")
           vim.fn.feedkeys('i', 'n')
         end
       else
@@ -341,7 +343,7 @@ local function OnTermOpen()
     DP("OnTermOpen set prev_terminal_bufnr to " .. bufnr)
   end
   --if (vim.fn.mode() ~= 't' and (vim.b.term_mode == false or vim.b.term_mode == nil)) then
-  if vim.fn.mode() ~= 't' then
+  if vim.fn.mode() ~= 'i' then
     DP("OnTermOpen feedkeys i")
     vim.fn.feedkeys('i', 'n');
     --vim.b.term_mode = true
@@ -369,8 +371,10 @@ local function OnWinEnter_term()
   local mode = vim.fn.mode() 
   DP("-------------------------------")
   DP("OnWinEnter_term mode:" .. mode .. " bufnr:" .. bufnr .. " name:" .. bufname)
-  DP("OnWinEnter_term feedkeys i")
-  vim.fn.feedkeys('i', 'n');
+  if vim.fn.mode() ~= 'i' then
+    DP("OnWinEnter_term feedkeys i")
+    vim.fn.feedkeys('i', 'n');
+  end
 end
 
 local function OnBufEnter_all()
@@ -386,8 +390,10 @@ local function OnBufEnter_all()
     if M.prev_buffer_is_terminal == true then
       -- since switch from terminal to terminal WON'T trigger OnWinEnter_term event, 
       -- we check if last buffer is also terminal, if so, feedkeys to enter terminal mode
-      DP("OnBufEnter_all prev buffer is terminal, feedkeys i" .. bufnr)
-      vim.fn.feedkeys('i', 'n');
+      if vim.fn.mode() ~= 'i' then
+        DP("OnBufEnter_all prev buffer is terminal, feedkeys i" .. bufnr)
+        vim.fn.feedkeys('i', 'n');
+      end
     end
     M.prev_buffer_is_terminal = true
   else
