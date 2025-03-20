@@ -1,7 +1,7 @@
 local M = {}
 
-M.debug = false
---M.debug = true
+--M.debug = false
+M.debug = true
 
 M.next_term_no = 1
 
@@ -289,7 +289,15 @@ M.buffer_terminal_toggle = function()
   if string.match(vim.api.nvim_buf_get_name(0), "term://") ~= nil then
     if M.prev_buffer_bufnr ~= nil then
       if vim.fn.buflisted(M.prev_buffer_bufnr) ~= 0 then
-        vim.cmd("b " .. M.prev_buffer_bufnr)
+        local wins = vim.fn.win_findbuf(M.prev_buffer_bufnr)
+        if #wins ~= 0 then
+          --jump to window instead of switch buffer
+          local winid = vim.fn.win_getid(wins[1])
+          vim.fn.win_gotoid(wins[1])
+          --vim.cmd(winid .. "wincmd w")
+        else
+          vim.cmd("b " .. M.prev_buffer_bufnr)
+        end
       else
         require("notify")("Alternate buf not existed, switch to next buffer", "info", { title = "Buffer Switch", timeout = 1000, })
         M.switch_buffer(true)
@@ -300,10 +308,19 @@ M.buffer_terminal_toggle = function()
   else
     if M.prev_terminal_bufnr ~= nil then
       if vim.fn.buflisted(M.prev_terminal_bufnr) ~= 0 then
-        vim.cmd("b " .. M.prev_terminal_bufnr)
-        if vim.fn.mode() ~= 'i' then
-          DP("switch back to alternate terminal, feedkeys i")
-          vim.fn.feedkeys('i', 'n')
+        local wins = vim.fn.win_findbuf(M.prev_terminal_bufnr)
+        if #wins ~= 0 then
+          --jump to window instead of switch buffer
+          local winid = vim.fn.win_getid(wins[1])
+          --vim.fn.win_gotoid(winid)
+          vim.fn.win_gotoid(wins[1])
+          --vim.cmd(winid .. "wincmd w")
+        else
+          vim.cmd("b " .. M.prev_terminal_bufnr)
+          if vim.fn.mode() ~= 'i' then
+            DP("switch back to alternate terminal, feedkeys i")
+            vim.fn.feedkeys('i', 'n')
+          end
         end
       else
         require("notify")("Alternate terminal not existed, switch to next terminal", "info", { title = "Terminal Switch", timeout = 1000, })
