@@ -34,6 +34,11 @@ local function terminal_check_insert_mode(msg)
   end
 end
 
+local function notify(title, content)
+  require("notify").dismiss()
+  require("notify")(content, "info", { title = title, timeout = 2000, })
+end
+
 local function do_switch_buffer(bufnr, buf_switch_cb)
   local wins = vim.fn.win_findbuf(bufnr)
   if #wins ~= 0 then
@@ -64,21 +69,30 @@ local function do_switch_terminal(bufnr, wrap)
     local process_name = h:read("*a")
     h:close()
     process_name = string.gsub(process_name, "\n","")
-    info = info .. " " .. process_name .. "(" .. pid ..  ")"
+
+    info = info .. "\n" .. "name: " .. process_name
+
+    cmd = "pwdx " .. pid .. " | awk '{print $2}' | tr -d \"\\n\""
+    h = io.popen(cmd)
+    local pwd = h:read("*a")
+    h:close()
+
+    info = info .. "\n" .. "pwd: " .. pwd
   else
+    -- for those terminal opened on session restore, we don't have terminal variable available
     info = info .. " bufnr:" .. bufnr
   end
 
   if wrap ~= nil then
     if wrap == "wrap_first" then
-      info = info .. " (FIRST buffer)"
+      info = info .. "\n" .. "wrap to FIRST buffer"
     else 
       if wrap == "wrap_last" then
-        info = info .. " (LAST buffer)"
+        info = info .. "\n" .. "wrap to LAST buffer"
       end
     end
   end
-  require("notify")(info, "info", { title = "Terminal Switch", timeout = 1000, })
+  notify("Terminal Switch", info)
   --terminal is also a buffer in neovim
   do_switch_buffer(bufnr)
 end
@@ -114,13 +128,13 @@ local function switch_to_buffer(next)
   --DP(table.concat(bufs_nr, " "))
   if #bufs_nr == 0 then
     --DP("no open terminal")
-    require("notify")("No buffer open", "info", { title = "Buffer Switch", timeout = 1000, })
+    notify("Buffer Switch", "No buffer open")
     return
   end
 
   if #bufs_nr == 1 then
     if curbuf_is_terminal == false then
-      require("notify")("No other buffers ", "info", { title = "Buffer Switch", timeout = 1000, })
+      notify("Buffer Switch", "No other buffer")
       return
     end
   end
@@ -134,7 +148,7 @@ local function switch_to_buffer(next)
         return
       end
     end
-    require("notify")("Wrap to the first buffer", "info", { title = "Buffer Switch", timeout = 1000, })
+    notify("Buffer Switch", "Wrap to the first buffer")
     do_switch_buffer(bufs_nr[1])
   else
     table.sort(bufs_nr, function(left, right)
@@ -150,7 +164,7 @@ local function switch_to_buffer(next)
         return
       end
     end
-    require("notify")("Wrap to the last buffer ", "info", { title = "Buffer Switch", timeout = 1000, })
+    notify("Buffer Switch", "Wrap to the last buffer")
     do_switch_buffer(bufs_nr[1])
   end
 end
@@ -186,13 +200,13 @@ local function switch_to_terminal(next)
 
   if #terminal_bufs_nr == 0 then
     --DP("no open terminal")
-    require("notify")("No terminal open", "info", { title = "Terminal Switch", timeout = 1000, })
+    notify("Terminal Switch", "no terminal open")
     return
   end
 
   if #terminal_bufs_nr == 1 then
     if curbuf_is_terminal == true then
-      require("notify")("No other terminal ", "info", { title = "Buffer Switch", timeout = 1000, })
+      notify("Terminal Switch", "no other terminal")
       --no other terminal to be switch
       -- need to feedkeys, becase tmap key switch back to normal mode, 
       -- and no buffer switch, so there is no BufEnter event trigger
@@ -303,7 +317,7 @@ M.toggle_buffer_terminal = function()
       if vim.fn.buflisted(M.prev_buffer_bufnr) ~= 0 then
         do_switch_buffer(M.prev_buffer_bufnr)
       else
-        require("notify")("Alternate buf not existed, switch to next buffer", "info", { title = "Buffer Switch", timeout = 1000, })
+        notify("Buffer Switch", "Alternate buffer not existed, switch to next buffer")
         switch_to_buffer(true)
       end
     else
@@ -317,7 +331,7 @@ M.toggle_buffer_terminal = function()
           terminal_check_insert_mode("switch back to alternate terminal")
         end)
       else
-        require("notify")("Alternate terminal not existed, switch to next terminal", "info", { title = "Terminal Switch", timeout = 1000, })
+        notify("Buffer Switch", "Alternate terminal not existed, switch to next terminal")
         switch_to_terminal(true)
       end
     else
@@ -336,7 +350,7 @@ M.send_to_terminal = function(switch_to_terminal)
   end
 
   if #terminal_chans == 0 then
-    require("notify")("No terminal open", "info", { title = "Send to terminal", timeout = 1000, })
+    notify("Send to terminal", "No terminal open")
     return
   end
 
@@ -374,30 +388,43 @@ M.setup = function()
   au({'TermLeave'}, 'term://*', OnTermLeave)
   au({'BufEnter'}, '*', OnBufEnter)
 
+  -- <C-a> add a terminal
+  vim.api.nvim_set_keymap('t', '<C-a>', '<C-\\><C-N><cmd>terminal<CR>',
+    {noremap = true, silent = true})
+  -- <C-a> add a terminal vertical split
+  vim.api.nvim_set_keymap('t', '<C-v>', '<C-\\><C-N><cmd>keepalt rightbelow vsplit term://bash<CR>',
+    {noremap = true, silent = true})
+
+  vim.api.nvim_set_keymap('n', '<C-a>', '<cmd>terminal<CR>',
+    {noremap = true, silent = true})
+  -- <C-a> add a terminal vertical split
+  vim.api.nvim_set_keymap('n', '<C-v>', '<cmd>keepalt rightbelow vsplit term://bash<CR>',
+    {noremap = true, silent = true})
+
   vim.api.nvim_set_keymap('t', '<C-t>', 
     '<C-\\><C-N><cmd>lua require("tomatoterm").toggle_buffer_terminal()<cr>',
-  {noremap = true, silent = true})
+    {noremap = true, silent = true})
   vim.api.nvim_set_keymap('t', '<C-n>',
     '<C-\\><C-N><cmd>lua require("tomatoterm").switch_to_buffer_terminal(true)<cr>',
-  {noremap = true, silent = true})
+    {noremap = true, silent = true})
   vim.api.nvim_set_keymap('t', '<C-p>',
     '<C-\\><C-N><cmd>lua require("tomatoterm").switch_to_buffer_terminal(false)<cr>',
-  {noremap = true, silent = true})
+    {noremap = true, silent = true})
 
   vim.api.nvim_set_keymap('n', '<C-t>', 
-    '<C-\\><C-N><cmd>lua require("tomatoterm").toggle_buffer_terminal()<cr>',
-  {noremap = true, silent = true})
+    '<cmd>lua require("tomatoterm").toggle_buffer_terminal()<cr>',
+    {noremap = true, silent = true})
   vim.api.nvim_set_keymap('n', '<C-n>',
-    '<C-\\><C-N><cmd>lua require("tomatoterm").switch_to_buffer_terminal(true)<cr>',
-  {noremap = true, silent = true})
+    '<cmd>lua require("tomatoterm").switch_to_buffer_terminal(true)<cr>',
+    {noremap = true, silent = true})
   vim.api.nvim_set_keymap('n', '<C-p>',
-    '<C-\\><C-N><cmd>lua require("tomatoterm").switch_to_buffer_terminal(false)<cr>',
-  {noremap = true, silent = true})
+    '<cmd>lua require("tomatoterm").switch_to_buffer_terminal(false)<cr>',
+    {noremap = true, silent = true})
 
   -- send visual select text to terminal run:
   vim.api.nvim_set_keymap('n', 's', 
     "<ESC><cmd>lua require('tomatoterm').send_to_terminal(true)<CR>",
-  {noremap = true, silent = true})
+    {noremap = true, silent = true})
 end
 
 return M
