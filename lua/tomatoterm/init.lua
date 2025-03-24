@@ -26,9 +26,9 @@ end
 
 --terminal_check_insert_mode: 
 --    if current terminal is not in insert mode, feedkeys i to enter insert mode
-local function terminal_check_insert_mode(msg)
+local function terminal_check_insert_mode(debug_msg)
   if vim.fn.mode() ~= 'i' and (vim.b.feedkeys == nil or vim.b.feedkeys == false) then
-    DP("feedkeys i:" .. msg)
+    DP("feedkeys i:" .. debug_msg)
     vim.fn.feedkeys('i', 'n')
     vim.b.feedkeys = true
   end
@@ -39,7 +39,10 @@ local function notify(title, content)
   require("notify")(content, "info", { title = title, timeout = 2000, })
 end
 
-local function do_switch_buffer(bufnr, buf_switch_cb)
+local function do_switch_buffer(bufnr)
+  local info = ""
+  info = info .. vim.fn.bufname(bufnr)
+  notify("Buffer Switch", info)
   local wins = vim.fn.win_findbuf(bufnr)
   if #wins ~= 0 then
     --jump to window instead of switch buffer
@@ -48,9 +51,6 @@ local function do_switch_buffer(bufnr, buf_switch_cb)
     --vim.cmd(winid .. "wincmd w")
   else
     vim.cmd("b " .. bufnr)
-    if buf_switch_cb ~= nil then
-      buf_switch_cb()
-    end
   end
 end
 
@@ -85,16 +85,24 @@ local function do_switch_terminal(bufnr, wrap)
 
   if wrap ~= nil then
     if wrap == "wrap_first" then
-      info = info .. "\n" .. "wrap to FIRST buffer"
+      info = info .. "\n" .. "wrap to FIRST terminal"
     else 
       if wrap == "wrap_last" then
-        info = info .. "\n" .. "wrap to LAST buffer"
+        info = info .. "\n" .. "wrap to LAST terminal"
       end
     end
   end
   notify("Terminal Switch", info)
   --terminal is also a buffer in neovim
-  do_switch_buffer(bufnr)
+  local wins = vim.fn.win_findbuf(bufnr)
+  if #wins ~= 0 then
+    --jump to window instead of switch buffer
+    local winid = vim.fn.win_getid(wins[1])
+    vim.fn.win_gotoid(wins[1])
+    --vim.cmd(winid .. "wincmd w")
+  else
+    vim.cmd("b " .. bufnr)
+  end
 end
 
 local function switch_to_buffer(next)
@@ -327,9 +335,7 @@ M.toggle_buffer_terminal = function()
     --last is normal buffer, switch to a terminal
     if M.prev_terminal_bufnr ~= nil then
       if vim.fn.buflisted(M.prev_terminal_bufnr) ~= 0 then
-        do_switch_buffer(M.prev_terminal_bufnr, function()
-          terminal_check_insert_mode("switch back to alternate terminal")
-        end)
+        do_switch_terminal(M.prev_terminal_bufnr)
       else
         notify("Buffer Switch", "Alternate terminal not existed, switch to next terminal")
         switch_to_terminal(true)
