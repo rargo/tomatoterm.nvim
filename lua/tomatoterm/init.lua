@@ -394,17 +394,18 @@ M.setup = function()
   au({'TermLeave'}, 'term://*', OnTermLeave)
   au({'BufEnter'}, '*', OnBufEnter)
 
-  -- <C-a> add a terminal
-  vim.api.nvim_set_keymap('t', '<C-a>', '<C-\\><C-N><cmd>terminal<CR>',
+  -- <C-y> add a terminal
+  vim.api.nvim_set_keymap('t', '<C-y>', '<C-\\><C-N><cmd>terminal<CR>',
     {noremap = true, silent = true})
-  -- <C-a> add a terminal vertical split
-  vim.api.nvim_set_keymap('t', '<C-v>', '<C-\\><C-N><cmd>keepalt rightbelow vsplit term://bash<CR>',
+  -- <C-e> add a terminal vertical split
+  vim.api.nvim_set_keymap('t', '<C-e>', '<C-\\><C-N><cmd>keepalt rightbelow vsplit term://bash<CR>',
     {noremap = true, silent = true})
 
-  vim.api.nvim_set_keymap('n', '<C-a>', '<cmd>terminal<CR>',
+  -- <C-y> add a terminal
+  vim.api.nvim_set_keymap('n', '<C-y>', '<cmd>terminal<CR>',
     {noremap = true, silent = true})
-  -- <C-a> add a terminal vertical split
-  vim.api.nvim_set_keymap('n', '<C-v>', '<cmd>keepalt rightbelow vsplit term://bash<CR>',
+  -- <C-e> add a terminal vertical split
+  vim.api.nvim_set_keymap('n', '<C-e>', '<cmd>keepalt rightbelow vsplit term://bash<CR>',
     {noremap = true, silent = true})
 
   vim.api.nvim_set_keymap('t', '<C-t>', 
