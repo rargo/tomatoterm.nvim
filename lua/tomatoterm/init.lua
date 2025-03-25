@@ -10,6 +10,8 @@ M.terminals = {}
 
 M.default_options = {
   keys = {
+    -- it's hard to find keys that both not used in neovim and shell
+    -- follow compromise solution
     toggle = "<C-t>",
     next_buffer_terminal = "<C-n>",
     prev_buffer_terminal = "<C-p>",
