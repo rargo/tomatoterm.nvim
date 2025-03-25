@@ -8,6 +8,20 @@ M.next_term_no = 1
 
 M.terminals = {}
 
+M.default_options = {
+  keys = {
+    toggle = "<C-t>",
+    next_buffer_terminal = "<C-n>",
+    prev_buffer_terminal = "<C-p>",
+    add_terminal = "<C-y>",
+    add_terminal_vertical_split = "<C-e>",
+    visual_mode_send_to_terminal = "s", -- visual mode map
+  }
+}
+M.options = {}
+
+local keymap_options = {noremap = true, silent = true}
+
 local group = vim.api.nvim_create_augroup('tomatoterm', {})
 
 local function au(typ, pattern, cmdOrFn)
@@ -135,16 +149,18 @@ local function switch_to_buffer(next)
 
   --DP(table.concat(bufs_nr, " "))
   if #bufs_nr == 0 then
-    --DP("no open terminal")
     notify("Buffer Switch", "No buffer open")
+    if curbuf_is_terminal == true then
+      -- need to feedkeys, becase tmap key switch back to normal mode, 
+      -- and no buffer switch, so there is no BufEnter event trigger
+      terminal_check_insert_mode("No buffer open, stay in current terminal")
+    end
     return
   end
 
-  if #bufs_nr == 1 then
-    if curbuf_is_terminal == false then
-      notify("Buffer Switch", "No other buffer")
-      return
-    end
+  if #bufs_nr == 1 and curbuf_is_terminal == false then
+    notify("Buffer Switch", "No other buffer")
+    return
   end
 
   if next then
@@ -212,15 +228,13 @@ local function switch_to_terminal(next)
     return
   end
 
-  if #terminal_bufs_nr == 1 then
-    if curbuf_is_terminal == true then
-      notify("Terminal Switch", "no other terminal")
-      --no other terminal to be switch
-      -- need to feedkeys, becase tmap key switch back to normal mode, 
-      -- and no buffer switch, so there is no BufEnter event trigger
-      terminal_check_insert_mode("curbuf is the only terminal")
-      return
-    end
+  if #terminal_bufs_nr == 1 and curbuf_is_terminal == true then
+    notify("Terminal Switch", "no other terminal")
+    --no other terminal to be switch
+    -- need to feedkeys, becase tmap key switch back to normal mode, 
+    -- and no buffer switch, so there is no BufEnter event trigger
+    terminal_check_insert_mode("curbuf is the only terminal")
+    return
   end
 
   if next then
@@ -388,50 +402,45 @@ M.send_to_terminal = function(switch_to_terminal)
   end
 end
 
-M.setup = function()
+M.setup = function(opt)
+  M.options = vim.tbl_deep_extend("force", M.default_options, options or {})
+
   DP("tomatoterm setup")
   au({'TermOpen'}, 'term://*', OnTermOpen)
   au({'TermLeave'}, 'term://*', OnTermLeave)
   au({'BufEnter'}, '*', OnBufEnter)
 
   -- <C-a> add a terminal
-  vim.api.nvim_set_keymap('t', '<C-a>', '<C-\\><C-N><cmd>terminal<CR>',
-    {noremap = true, silent = true})
+  vim.api.nvim_set_keymap('t', M.options.keys.add_terminal,
+    '<C-\\><C-N><cmd>terminal<CR>', keymap_options)
   -- <C-v> add a terminal vertical split
-  vim.api.nvim_set_keymap('t', '<C-v>', '<C-\\><C-N><cmd>keepalt rightbelow vsplit term://bash<CR>',
-    {noremap = true, silent = true})
+  vim.api.nvim_set_keymap('t', M.options.keys.add_terminal_vertical_split,
+    '<C-\\><C-N><cmd>keepalt rightbelow vsplit term://bash<CR>', keymap_options)
 
   -- <C-a> add a terminal
-  vim.api.nvim_set_keymap('n', '<C-a>', '<cmd>terminal<CR>',
-    {noremap = true, silent = true})
+  vim.api.nvim_set_keymap('n', M.options.keys.add_terminal,
+    '<C-\\><C-N><cmd>terminal<CR>', keymap_options)
   -- <C-v> add a terminal vertical split
-  vim.api.nvim_set_keymap('n', '<C-v>', '<cmd>keepalt rightbelow vsplit term://bash<CR>',
-    {noremap = true, silent = true})
+  vim.api.nvim_set_keymap('n', M.options.keys.add_terminal_vertical_split,
+    '<C-\\><C-N><cmd>keepalt rightbelow vsplit term://bash<CR>', keymap_options)
 
-  vim.api.nvim_set_keymap('t', '<C-t>', 
-    '<C-\\><C-N><cmd>lua require("tomatoterm").toggle_buffer_terminal()<cr>',
-    {noremap = true, silent = true})
-  vim.api.nvim_set_keymap('t', '<C-n>',
-    '<C-\\><C-N><cmd>lua require("tomatoterm").switch_to_buffer_terminal(true)<cr>',
-    {noremap = true, silent = true})
-  vim.api.nvim_set_keymap('t', '<C-p>',
-    '<C-\\><C-N><cmd>lua require("tomatoterm").switch_to_buffer_terminal(false)<cr>',
-    {noremap = true, silent = true})
+  vim.api.nvim_set_keymap('t', M.options.keys.toggle, 
+    '<C-\\><C-N><cmd>lua require("tomatoterm").toggle_buffer_terminal()<cr>', keymap_options)
+  vim.api.nvim_set_keymap('t', M.options.keys.next_buffer_terminal,
+    '<C-\\><C-N><cmd>lua require("tomatoterm").switch_to_buffer_terminal(true)<cr>', keymap_options)
+  vim.api.nvim_set_keymap('t', M.options.keys.prev_buffer_terminal,
+    '<C-\\><C-N><cmd>lua require("tomatoterm").switch_to_buffer_terminal(false)<cr>', keymap_options)
 
-  vim.api.nvim_set_keymap('n', '<C-t>', 
-    '<cmd>lua require("tomatoterm").toggle_buffer_terminal()<cr>',
-    {noremap = true, silent = true})
-  vim.api.nvim_set_keymap('n', '<C-n>',
-    '<cmd>lua require("tomatoterm").switch_to_buffer_terminal(true)<cr>',
-    {noremap = true, silent = true})
-  vim.api.nvim_set_keymap('n', '<C-p>',
-    '<cmd>lua require("tomatoterm").switch_to_buffer_terminal(false)<cr>',
-    {noremap = true, silent = true})
+  vim.api.nvim_set_keymap('n', M.options.keys.toggle, 
+    '<cmd>lua require("tomatoterm").toggle_buffer_terminal()<cr>', keymap_options)
+  vim.api.nvim_set_keymap('n', M.options.keys.next_buffer_terminal,
+    '<cmd>lua require("tomatoterm").switch_to_buffer_terminal(true)<cr>', keymap_options)
+  vim.api.nvim_set_keymap('n', M.options.keys.prev_buffer_terminal,
+    '<cmd>lua require("tomatoterm").switch_to_buffer_terminal(false)<cr>', keymap_options)
 
   -- send visual select text to terminal run:
-  vim.api.nvim_set_keymap('n', 's', 
-    "<ESC><cmd>lua require('tomatoterm').send_to_terminal(true)<CR>",
-    {noremap = true, silent = true})
+  vim.api.nvim_set_keymap('v', M.options.keys.visual_mode_send_to_terminal,
+    "<ESC><cmd>lua require('tomatoterm').send_to_terminal(true)<CR>", keymap_options)
 end
 
 return M
