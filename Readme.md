@@ -36,7 +36,7 @@ Install the plugin with your preferred package manager:
 ### [lazy.nvim](https://github.com/folke/lazy.nvim)
 
 ```lua
-{ 'rargo/tomatoterm' }
+{ 'rargo/tomatoterm.nvim' }
 ```
 
 ### Setup
