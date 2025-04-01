@@ -12,6 +12,7 @@ It has the following features:
 ## Requirements
 
 - Neovim has [Neovim notify plugin](https://github.com/rcarriga/nvim-notify) installed
+- Optional [bufexplorer](https://github.com/rargo/bufexplorer) installed, a modified version bufexplorer to display terminal buffers and non-terminal buffers separately
 
 ## Default Keymaps
 
@@ -23,11 +24,21 @@ Terminal and normal mode:
 - <C-y\>:  add a terminal
 - <C-e\>:  add a terminal in vertical split window
 
+
 Visual mode:
 
 - s: send visual select text to the first terminal
 
 Please note that it is difficult to find a keymap that is easy to use and does not conflict with neovim and your shell. The default keymap is most likely a personal setting. You can change the keymap as described in the following sections.
+
+## Bufexplorer Keymaps
+
+Add the following keymap for terminal buffers and non-terminal buffers selecting:
+
+```
+vim.api.nvim_set_keymap('n', '<C-b>', '<cmd>BufExplorer<cr>', {noremap = true, silent = true})
+vim.api.nvim_set_keymap('t', '<C-b>', '<C-\\><C-N><cmd>TerminalExplorer<cr>', {noremap = true, silent = true})
+```
 
 ## Installation
 
