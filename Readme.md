@@ -8,6 +8,12 @@ It has the following features:
 - Automatically enter insert mode when entering a terminal buffer, make the terminal ready to accept user input
 - A keystroke switches to the next and previous normal buffer or terminal
 - Send visual selection text to the terminal
+- With [bufexplorer](https://github.com/rargo/bufexplorer) installed, select terminal buffers and non-terminal buffers separately
+
+![](assets/tomatoterm_bufexplorer.png)
+![](assets/tomatoterm_terminalexplorer.png)
+![](assets/tomatoterm_nextbuffer.png)
+![](assets/tomatoterm_nextterminal.png)
 
 ## Requirements
 
