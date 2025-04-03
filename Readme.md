@@ -4,15 +4,22 @@ Tomatoterm.nvim is a small plugin that helps you use the terminal more seamlessl
 
 It has the following features:
 
-- A keystroke switches between normal buffers (non-terminal) and terminal buffers
+- A keystroke switches between normal buffers (non-terminal buffers) and terminal buffers
 - Automatically enter insert mode when entering a terminal buffer, make the terminal ready to accept user input
 - A keystroke switches to the next and previous normal buffer or terminal
 - Send visual selection text to the terminal
 - With [bufexplorer](https://github.com/rargo/bufexplorer) installed, select terminal buffers and non-terminal buffers separately
 
+Buffer explorer  
 ![](assets/tomatoterm_bufexplorer.png)
+
+Terminal explorer  
 ![](assets/tomatoterm_terminalexplorer.png)
+
+Switch buffer  
 ![](assets/tomatoterm_nextbuffer.png)
+
+Switch terminal  
 ![](assets/tomatoterm_nextterminal.png)
 
 ## Requirements
@@ -24,11 +31,11 @@ It has the following features:
 
 Terminal and normal mode:
 
-- <C-t\>:  toggle between terminal and normal buffer
-- <C-n\>:  switch to next terminal or normal buffer
-- <C-p\>:  switch to previous terminal or normal buffer
-- <C-y\>:  add a terminal
-- <C-e\>:  add a terminal in vertical split window
+- <C-t\>:  toggle between terminal and non-terminal buffer
+- <C-n\>:  switch to next terminal or non-terminal buffer
+- <C-p\>:  switch to previous terminal or non-terminal buffer
+- <F12\>:  add a terminal
+- <C-F12\>:  add a terminal in vertical split window
 
 
 Visual mode:

@@ -15,8 +15,8 @@ M.default_options = {
     toggle = "<C-t>",
     next_buffer_terminal = "<C-n>",
     prev_buffer_terminal = "<C-p>",
-    add_terminal = "<C-y>",
-    add_terminal_vertical_split = "<C-e>",
+    add_terminal = "<F12>",
+    add_terminal_vertical_split = "<C-F12>",
     visual_mode_send_to_terminal = "s", -- visual mode map
   }
 }
