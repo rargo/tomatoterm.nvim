@@ -9,6 +9,7 @@ M.next_term_no = 1
 M.terminals = {}
 
 M.default_options = {
+  start_new_terminal_if_none_exist = true;
   keys = {
     -- it's hard to find keys that both not used in neovim and shell
     -- follow compromise solution
@@ -226,7 +227,12 @@ local function switch_to_terminal(next)
 
   if #terminal_bufs_nr == 0 then
     --DP("no open terminal")
-    notify("Terminal Switch", "no terminal open")
+    if M.options.start_new_terminal_if_none_exist == true then
+      vim.cmd("terminal")
+      notify("Terminal Switch", "No terminal open, start a new one")
+    else
+      notify("Terminal Switch", "No terminal open")
+    end
     return
   end
 
@@ -421,10 +427,10 @@ M.setup = function(opt)
 
   -- <C-a> add a terminal
   vim.api.nvim_set_keymap('n', M.options.keys.add_terminal,
-    '<C-\\><C-N><cmd>terminal<CR>', keymap_options)
+    '<cmd>terminal<CR>', keymap_options)
   -- <C-v> add a terminal vertical split
   vim.api.nvim_set_keymap('n', M.options.keys.add_terminal_vertical_split,
-    '<C-\\><C-N><cmd>keepalt rightbelow vsplit term://bash<CR>', keymap_options)
+    '<cmd>keepalt rightbelow vsplit term://bash<CR>', keymap_options)
 
   vim.api.nvim_set_keymap('t', M.options.keys.toggle, 
     '<C-\\><C-N><cmd>lua require("tomatoterm").toggle_buffer_terminal()<cr>', keymap_options)
