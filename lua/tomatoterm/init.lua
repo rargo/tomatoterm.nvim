@@ -2,7 +2,7 @@ local M = {}
 
 M.version = "0.1"
 
---M.debug = true
+-- M.debug = true
 
 M.next_term_no = 1
 
@@ -44,7 +44,8 @@ end
 --terminal_check_insert_mode: 
 --    if current terminal is not in insert mode, feedkeys i to enter insert mode
 local function terminal_check_insert_mode(debug_msg)
-  if vim.fn.mode() ~= 'i' and (vim.b.feedkeys == nil or vim.b.feedkeys == false) then
+  DP("vim mode: " .. vim.fn.mode())
+  if (vim.fn.mode() ~= 'i' and vim.fn.mode() ~= 't') and (vim.b.feedkeys == nil or vim.b.feedkeys == false) then
     DP("feedkeys i:" .. debug_msg)
     vim.fn.feedkeys('i', 'n')
     vim.b.feedkeys = true
@@ -122,7 +123,7 @@ local function do_switch_terminal(bufnr, wrap)
   end
 end
 
-local function switch_to_buffer(next)
+M.switch_to_buffer = function(next)
   --DP("switch_to_buffer")
   local curbuf_nr = vim.fn.bufnr() 
   local curbuf_is_terminal = false
@@ -196,7 +197,7 @@ local function switch_to_buffer(next)
   end
 end
 
-local function switch_to_terminal(next)
+M.switch_to_terminal = function(next)
   --DP("switch_to_terminal")
   local curbuf_nr = vim.fn.bufnr() 
   local curbuf_is_terminal = false
@@ -334,9 +335,9 @@ end
 
 M.switch_to_buffer_terminal = function(next)
   if string.match(vim.api.nvim_buf_get_name(0), "term://") ~= nil then
-    switch_to_terminal(next)
+    M.switch_to_terminal(next)
   else
-    switch_to_buffer(next)
+    M.switch_to_buffer(next)
   end
 end
 
@@ -348,10 +349,10 @@ M.toggle_buffer_terminal = function()
         do_switch_buffer(M.prev_buffer_bufnr)
       else
         notify("Buffer Switch", "Alternate buffer not existed, switch to next buffer")
-        switch_to_buffer(true)
+        M.switch_to_buffer(true)
       end
     else
-      switch_to_buffer(true)
+      M.switch_to_buffer(true)
     end
   else
     --last is normal buffer, switch to a terminal
@@ -360,10 +361,10 @@ M.toggle_buffer_terminal = function()
         do_switch_terminal(M.prev_terminal_bufnr)
       else
         notify("Buffer Switch", "Alternate terminal not existed, switch to next terminal")
-        switch_to_terminal(true)
+        M.switch_to_terminal(true)
       end
     else
-      switch_to_terminal(true)
+      M.switch_to_terminal(true)
     end
   end
 end
