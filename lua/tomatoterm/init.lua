@@ -229,7 +229,7 @@ M.switch_to_terminal = function(next)
   if #terminal_bufs_nr == 0 then
     --DP("no open terminal")
     if M.options.start_new_terminal_if_none_exist == true then
-      vim.cmd("terminal")
+      vim.cmd("keepalt terminal")
       notify("Terminal Switch", "No terminal open, start a new one")
     else
       notify("Terminal Switch", "No terminal open")
@@ -421,14 +421,14 @@ M.setup = function(opt)
 
   -- <C-a> add a terminal
   vim.api.nvim_set_keymap('t', M.options.keys.add_terminal,
-    '<C-\\><C-N><cmd>terminal<CR>', keymap_options)
+    '<C-\\><C-N><cmd>keepalt terminal<CR>', keymap_options)
   -- <C-v> add a terminal vertical split
   vim.api.nvim_set_keymap('t', M.options.keys.add_terminal_vertical_split,
     '<C-\\><C-N><cmd>keepalt rightbelow vsplit term://bash<CR>', keymap_options)
 
   -- <C-a> add a terminal
   vim.api.nvim_set_keymap('n', M.options.keys.add_terminal,
-    '<cmd>terminal<CR>', keymap_options)
+    '<cmd>keepalt terminal<CR>', keymap_options)
   -- <C-v> add a terminal vertical split
   vim.api.nvim_set_keymap('n', M.options.keys.add_terminal_vertical_split,
     '<cmd>keepalt rightbelow vsplit term://bash<CR>', keymap_options)
@@ -447,9 +447,18 @@ M.setup = function(opt)
   vim.api.nvim_set_keymap('n', M.options.keys.prev_buffer_terminal,
     '<cmd>lua require("tomatoterm").switch_to_buffer_terminal(false)<cr>', keymap_options)
 
+  --TODO rename terminal
+  --vim.api.nvim_set_keymap("t", "<Ctrl-s>", 
+
   -- send visual select text to terminal run:
   vim.api.nvim_set_keymap('v', M.options.keys.visual_mode_send_to_terminal,
     "<ESC><cmd>lua require('tomatoterm').send_to_terminal(true)<CR>", keymap_options)
+
+  vim.api.nvim_create_user_command('TermSetName', function(opts)
+    vim.b.term_name = opts.args
+    print("set term name:" .. opts.args)
+  end, { nargs = 1 })
 end
+
 
 return M
