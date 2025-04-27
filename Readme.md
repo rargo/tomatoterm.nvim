@@ -34,6 +34,7 @@ Terminal and normal mode:
 - <C-t\>:  toggle between terminal and non-terminal buffer
 - <C-n\>:  switch to next terminal or non-terminal buffer
 - <C-p\>:  switch to previous terminal or non-terminal buffer
+- <C-s\>:  set current terminal name
 - <F12\>:  add a terminal
 - <C-F12\>:  add a terminal in vertical split window
 
@@ -70,15 +71,20 @@ Use default keymaps
 require("tomatoterm").setup()
 ```
 
-Modify keymaps, change those `somekey` to real key
+Modify keymaps, change those `somekey` to real key,  
+If you don't want to use some keymap, just set them to false.
+
 ```lua
 require("tomatoterm").setup({
+  start_new_terminal_if_none_exist = true; -- if no termial exist, set this option to true will start a new terminal, 
+                                           -- Default is true
   keys = {
     toggle = "somekey", -- toggle between terminal and normal buffer
     next_buffer_terminal = "somekey", -- switch to next terminal or normal buffer
     prev_buffer_terminal = "somekey", -- switch to previous terminal or normal buffer
     add_terminal = "somekey", -- add a new terminal
     add_terminal_vertical_split = "somekey", -- add a new terminal in vertical split window
+    set_terminal_name = "somekey", -- set current terminal name
     visual_mode_send_to_terminal = "somekey", -- visual mode map: send visual select text to the first terminal
   }
 })
