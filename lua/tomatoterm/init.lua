@@ -18,6 +18,7 @@ M.default_options = {
     prev_buffer_terminal = "<C-p>",
     add_terminal = "<F12>",
     add_terminal_vertical_split = "<C-F12>",
+    set_terminal_name = "<C-s>",
     visual_mode_send_to_terminal = "s", -- visual mode map
   }
 }
@@ -69,6 +70,12 @@ local function do_switch_buffer(bufnr)
     --vim.cmd(winid .. "wincmd w")
   else
     vim.cmd("b " .. bufnr)
+  end
+end
+
+local function set_keymap(mode, key, action, keymap_opt)
+  if key ~= false and key ~= nil then
+    vim.api.nvim_set_keymap(mode, key, action, keymap_opt)
   end
 end
 
@@ -411,6 +418,23 @@ M.send_to_terminal = function(switch_to_terminal)
   end
 end
 
+M.set_terminal_name = function() 
+  -- vim.ui.input({ prompt = 'Set Terminal Name: ' }, function(input)
+  --   if input ~= "" and input ~= nil then
+  --     vim.b.term_name = input
+  --   end
+  -- end)
+  local text = vim.fn.input("Set Terminal Name: ", "");
+  if text ~= "" then
+    vim.b.term_name = text
+    if vim.b.term_no ~= nil then
+      notify("Terminal " .. vim.b.term_no .. " New Name", text)
+    else
+      notify("Terminal New Name", text)
+    end
+  end
+end
+
 M.setup = function(opt)
   M.options = vim.tbl_deep_extend("force", M.default_options, options or {})
 
@@ -420,43 +444,46 @@ M.setup = function(opt)
   au({'BufEnter'}, '*', OnBufEnter)
 
   -- <C-a> add a terminal
-  vim.api.nvim_set_keymap('t', M.options.keys.add_terminal,
+  set_keymap('t', M.options.keys.add_terminal,
     '<C-\\><C-N><cmd>keepalt terminal<CR>', keymap_options)
   -- <C-v> add a terminal vertical split
-  vim.api.nvim_set_keymap('t', M.options.keys.add_terminal_vertical_split,
+  set_keymap('t', M.options.keys.add_terminal_vertical_split,
     '<C-\\><C-N><cmd>keepalt rightbelow vsplit term://bash<CR>', keymap_options)
 
   -- <C-a> add a terminal
-  vim.api.nvim_set_keymap('n', M.options.keys.add_terminal,
+  set_keymap('n', M.options.keys.add_terminal,
     '<cmd>keepalt terminal<CR>', keymap_options)
   -- <C-v> add a terminal vertical split
-  vim.api.nvim_set_keymap('n', M.options.keys.add_terminal_vertical_split,
+  set_keymap('n', M.options.keys.add_terminal_vertical_split,
     '<cmd>keepalt rightbelow vsplit term://bash<CR>', keymap_options)
 
-  vim.api.nvim_set_keymap('t', M.options.keys.toggle, 
+  set_keymap('t', M.options.keys.toggle, 
     '<C-\\><C-N><cmd>lua require("tomatoterm").toggle_buffer_terminal()<cr>', keymap_options)
-  vim.api.nvim_set_keymap('t', M.options.keys.next_buffer_terminal,
+  set_keymap('t', M.options.keys.next_buffer_terminal,
     '<C-\\><C-N><cmd>lua require("tomatoterm").switch_to_buffer_terminal(true)<cr>', keymap_options)
-  vim.api.nvim_set_keymap('t', M.options.keys.prev_buffer_terminal,
+  set_keymap('t', M.options.keys.prev_buffer_terminal,
     '<C-\\><C-N><cmd>lua require("tomatoterm").switch_to_buffer_terminal(false)<cr>', keymap_options)
 
-  vim.api.nvim_set_keymap('n', M.options.keys.toggle, 
+  set_keymap('n', M.options.keys.toggle, 
     '<cmd>lua require("tomatoterm").toggle_buffer_terminal()<cr>', keymap_options)
-  vim.api.nvim_set_keymap('n', M.options.keys.next_buffer_terminal,
+  set_keymap('n', M.options.keys.next_buffer_terminal,
     '<cmd>lua require("tomatoterm").switch_to_buffer_terminal(true)<cr>', keymap_options)
-  vim.api.nvim_set_keymap('n', M.options.keys.prev_buffer_terminal,
+  set_keymap('n', M.options.keys.prev_buffer_terminal,
     '<cmd>lua require("tomatoterm").switch_to_buffer_terminal(false)<cr>', keymap_options)
 
-  --TODO rename terminal
-  --vim.api.nvim_set_keymap("t", "<Ctrl-s>", 
+  set_keymap('t', M.options.keys.set_terminal_name,
+    '<cmd>lua require("tomatoterm").set_terminal_name()<cr>', keymap_options)
 
-  -- send visual select text to terminal run:
-  vim.api.nvim_set_keymap('v', M.options.keys.visual_mode_send_to_terminal,
-    "<ESC><cmd>lua require('tomatoterm').send_to_terminal(true)<CR>", keymap_options)
+  set_keymap('t', M.options.keys.add_terminal_vertical_split,
+    '<C-\\><C-N><cmd>keepalt rightbelow vsplit term://bash<CR>', keymap_options)
 
   vim.api.nvim_create_user_command('TermSetName', function(opts)
     vim.b.term_name = opts.args
-    print("set term name:" .. opts.args)
+    if vim.b.term_no ~= nil then
+      notify("Terminal " .. vim.b.term_no .. " New Name", text)
+    else
+      notify("Terminal New Name", text)
+    end
   end, { nargs = 1 })
 end
 
