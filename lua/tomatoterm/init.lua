@@ -42,6 +42,28 @@ local function DP(text)
   end
 end
 
+local function get_term_process_cwd(job_id)
+  local pid = vim.fn.jobpid(job_id)
+  cmd = "pwdx " .. pid .. " | awk '{print $2}' | tr -d \"\\n\""
+  h = io.popen(cmd)
+  local pwd = h:read("*a")
+  h:close()
+
+  return pwd
+end
+
+local function get_term_process_name(job_id)
+  local pid = vim.fn.jobpid(job_id)
+  local cmd = "ps -p " .. pid .. " -o comm="
+  local h = io.popen(cmd)
+  local process_name = h:read("*a")
+  h:close()
+  process_name = string.gsub(process_name, "\n","")
+
+  return process_name
+end
+
+
 --terminal_check_insert_mode: 
 --    if current terminal is not in insert mode, feedkeys i to enter insert mode
 local function terminal_check_insert_mode(debug_msg)
@@ -88,20 +110,10 @@ local function do_switch_terminal(bufnr, wrap)
 
     info = info .. " " .. term_no
 
-    local pid = vim.fn.jobpid(job_id)
-    local cmd = "ps -p " .. pid .. " -o comm="
-    local h = io.popen(cmd)
-    local process_name = h:read("*a")
-    h:close()
-    process_name = string.gsub(process_name, "\n","")
-
+    local process_name = get_term_process_name(job_id)
     info = info .. "\n" .. "name: " .. process_name
 
-    cmd = "pwdx " .. pid .. " | awk '{print $2}' | tr -d \"\\n\""
-    h = io.popen(cmd)
-    local pwd = h:read("*a")
-    h:close()
-
+    local pwd = get_term_process_cwd(job_id)
     info = info .. "\n" .. "pwd: " .. pwd
   else
     -- for those terminal opened on session restore, we don't have terminal variable available
@@ -377,26 +389,101 @@ M.toggle_buffer_terminal = function()
 end
 
 M.send_to_terminal = function(switch_to_terminal)
-  terminal_chans = {}
-  for _, chan in pairs(vim.api.nvim_list_chans()) do
-    --M.dp_table(chan)
-    if chan["mode"] == "terminal" and chan["pty"] ~= "" then
-      table.insert(terminal_chans, chan)
+  local buffers = vim.api.nvim_list_bufs()
+  local terminals = {}
+  for _, buf in ipairs(buffers) do
+    --local bufnr = vim.fn.bufnr(buf)
+    local name = vim.api.nvim_buf_get_name(buf)
+    --DP("buffer " .. bufnr .. " name:" .. name)
+
+    if vim.fn.buflisted(buf) == 0 then
+      goto loop
     end
+
+    if string.match(name, "term://") ~= nil then
+      local term = {}
+      term.term_no = vim.fn.getbufvar(buf, "term_no", -1)
+      term.term_name = vim.fn.getbufvar(buf, "term_name", "null")
+      print("send_to_terminal term_no:" .. term.term_no .. " term_name:" .. term.term_name)
+
+      term.buf_id = vim.fn.bufnr(buf)
+      term.job_id = vim.fn.getbufvar(buf, "terminal_job_id", 0)
+      print("send_to_terminal buf_id:" .. term.buf_id .. " job_id:" .. term.job_id)
+
+      term.cwd = get_term_process_cwd(term.job_id)
+      term.process_name = get_term_process_name(term.job_id)
+
+      table.insert(terminals, term)
+    end
+
+  ::loop::
   end
 
-  if #terminal_chans == 0 then
+  if #terminals == 0 then
     notify("Send to terminal", "No terminal open")
     return
   end
 
-  -- sort to get the first terminal
-  table.sort(terminal_chans, function(left, right)
-    return left["buffer"] < right["buffer"]
-  end)
+  local terminal_chan_id = -1
+  local terminal_buf_id = -1
+  if #terminals > 1 then
+    -- let user select which terminal to send to
+    
+    local options = {}
+    local option_chan_id = {}
+    local option_buf_id = {}
+    for _, term in ipairs(terminals) do
+      local str = term.job_id .. " " .. term.process_name .. " " .. term.cwd
+      
+      if term.term_no ~= -1 then
+        str = str .. " " .. term.term_no
+      end
 
-  local first_terminal_chan_id = terminal_chans[1]["id"]
-  local first_terminal_buffer_id = terminal_chans[1]["buffer"]
+      if term.term_name ~= "null" then
+        str = str .. " " .. term.term_name
+      end
+
+      option_chan_id.str = term.job_id
+      option_buf_id.str = term.buf_id
+    end
+
+    -- local select = vim.fn.inputlist(options)
+    -- print("select: " .. select)
+    -- terminal_chan_id = option_chan_id[select]
+    -- terminal_buf_id = option_buf_id[select]
+    vim.ui.select(options, {
+      prompt = 'please select one terminal to send to:'
+    }, function(choice)
+        terminal_chan_id = option_chan_id.choice
+        terminal_buf_id = option_buf_id.choice
+      end)
+  else
+    terminal_chan_id = terminals[1].job_id
+    terminal_buf_id = terminals[1].buf_id
+  end
+
+  print("terminal_chan_id: " .. terminal_chan_id .. " terminal_buf_id: " .. terminal_buf_id)
+
+  --terminal_chans = {}
+  --for _, chan in pairs(vim.api.nvim_list_chans()) do
+  --  --M.dp_table(chan)
+  --  if chan["mode"] == "terminal" and chan["pty"] ~= "" then
+  --    table.insert(terminal_chans, chan)
+  --  end
+  --end
+
+  -- if #terminal_chans == 0 then
+  --   notify("Send to terminal", "No terminal open")
+  --   return
+  -- end
+
+  -- -- sort to get the first terminal
+  -- table.sort(terminal_chans, function(left, right)
+  --   return left["buffer"] < right["buffer"]
+  -- end)
+
+  -- local first_terminal_chan_id = terminal_chans[1]["id"]
+  -- local first_terminal_buffer_id = terminal_chans[1]["buffer"]
 
   local line_start = vim.fn.line("'<")
   local line_end = vim.fn.line("'>")
@@ -412,9 +499,9 @@ M.send_to_terminal = function(switch_to_terminal)
     line_text = table.concat(vim.fn.getline(line_start, line_end), "\n") .. "\n"
   end
 
-  vim.api.nvim_chan_send(first_terminal_chan_id, line_text)
+  vim.api.nvim_chan_send(terminal_chan_id, line_text)
   if switch_to_terminal then
-    do_switch_buffer(first_terminal_buffer_id)
+    do_switch_buffer(terminal_buf_id)
   end
 end
 
@@ -476,6 +563,9 @@ M.setup = function(opt)
 
   set_keymap('t', M.options.keys.add_terminal_vertical_split,
     '<C-\\><C-N><cmd>keepalt rightbelow vsplit term://bash<CR>', keymap_options)
+
+  set_keymap('v', M.options.keys.visual_mode_send_to_terminal,
+    '<cmd>lua require("tomatoterm").send_to_terminal(true)<cr>', keymap_options)
 
   vim.api.nvim_create_user_command('TermSetName', function(opts)
     vim.b.term_name = opts.args
