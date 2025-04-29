@@ -485,19 +485,52 @@ M.send_to_terminal = function(switch_to_terminal)
   -- local first_terminal_chan_id = terminal_chans[1]["id"]
   -- local first_terminal_buffer_id = terminal_chans[1]["buffer"]
 
-  local line_start = vim.fn.line("'<")
-  local line_end = vim.fn.line("'>")
+  -- local line_start = vim.fn.line("'<")
+  -- local line_end = vim.fn.line("'>")
 
-  local col_start = vim.fn.col("'<")
-  local col_end = vim.fn.col("'>")
+  -- local col_start = vim.fn.col("'<")
+  -- local col_end = vim.fn.col("'>")
+  local _line_start, _col_start = unpack(vim.fn.getpos("."), 2, 3)
+  local _line_end, _col_end = unpack(vim.fn.getpos("v"), 2, 3)
+  -- local pos1 = vim.fn.getpos("'<")
+  -- local pos2 = vim.fn.getpos("'>")
+
+  -- local line_start = pos1[2]
+  -- local line_end = pos2[2]
+
+  -- local col_start = pos1[3]
+  -- local col_end = pos2[3]
+
+  local line_start = 0
+  local line_end = 0
+  if _line_start > _line_end then
+    line_start = _line_end
+    line_end = _line_start
+  else
+    line_start = _line_start
+    line_end = _line_end
+  end
+
+  if _col_start > _col_end then
+    col_start = _col_end
+    col_end = _col_start
+  else
+    col_start = _col_start
+    col_end = _col_end
+  end
+
+  print("line start: " .. line_start .. " line_end: " .. line_end)
+  print("col start: " .. col_start .. " col_end: " .. col_end)
 
   local line_text=""
-  if line_start == line_end then
-    -- one line
-    line_text = vim.fn.strcharpart(vim.fn.getline(line_start), col_start-1, col_end-col_start+1) .. "\n"
-  else
+  -- if line_start == line_end then
+  --   -- one line
+  --   line_text = vim.fn.strcharpart(vim.fn.getline(line_start), col_start-1, col_end-col_start+1) .. "\n"
+  -- else
     line_text = table.concat(vim.fn.getline(line_start, line_end), "\n") .. "\n"
-  end
+  -- end
+
+  print(line_text)
 
   vim.api.nvim_chan_send(terminal_chan_id, line_text)
   if switch_to_terminal then
