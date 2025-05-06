@@ -508,42 +508,8 @@ M.send_to_terminal = function(switch_to_terminal)
     print("invalid terminal_buf_id or terminal_chan_id")
   end
 
-  --terminal_chans = {}
-  --for _, chan in pairs(vim.api.nvim_list_chans()) do
-  --  --M.dp_table(chan)
-  --  if chan["mode"] == "terminal" and chan["pty"] ~= "" then
-  --    table.insert(terminal_chans, chan)
-  --  end
-  --end
-
-  -- if #terminal_chans == 0 then
-  --   notify("Send to terminal", "No terminal open")
-  --   return
-  -- end
-
-  -- -- sort to get the first terminal
-  -- table.sort(terminal_chans, function(left, right)
-  --   return left["buffer"] < right["buffer"]
-  -- end)
-
-  -- local first_terminal_chan_id = terminal_chans[1]["id"]
-  -- local first_terminal_buffer_id = terminal_chans[1]["buffer"]
-
-  -- local line_start = vim.fn.line("'<")
-  -- local line_end = vim.fn.line("'>")
-
-  -- local col_start = vim.fn.col("'<")
-  -- local col_end = vim.fn.col("'>")
   local _line_start, _col_start = unpack(vim.fn.getpos("."), 2, 3)
   local _line_end, _col_end = unpack(vim.fn.getpos("v"), 2, 3)
-  -- local pos1 = vim.fn.getpos("'<")
-  -- local pos2 = vim.fn.getpos("'>")
-
-  -- local line_start = pos1[2]
-  -- local line_end = pos2[2]
-
-  -- local col_start = pos1[3]
-  -- local col_end = pos2[3]
 
   local line_start = 0
   local line_end = 0
@@ -586,6 +552,10 @@ M.send_to_terminal = function(switch_to_terminal)
 
   if switch_to_terminal then
     do_switch_terminal(terminal_buf_id)
+  else
+    -- -- esc to exit visual mode
+    local keys = vim.api.nvim_replace_termcodes("<Esc>", true, false, true)
+    vim.api.nvim_feedkeys(keys, "n", false)
   end
 end
 
@@ -649,7 +619,7 @@ M.setup = function(opt)
     '<C-\\><C-N><cmd>keepalt rightbelow vsplit term://bash<CR>', keymap_options)
 
   set_keymap('v', M.options.keys.visual_mode_send_to_terminal,
-    '<cmd>lua require("tomatoterm").send_to_terminal(false)<cr><esc>', keymap_options)
+    '<cmd>lua require("tomatoterm").send_to_terminal(false)<cr>', keymap_options)
 
   set_keymap('v', M.options.keys.visual_mode_send_to_terminal_and_switch,
     '<cmd>lua require("tomatoterm").send_to_terminal(true)<cr>', keymap_options)
