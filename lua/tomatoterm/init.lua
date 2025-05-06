@@ -9,17 +9,35 @@ M.next_term_no = 1
 M.terminals = {}
 
 M.default_options = {
+  -- if toggle to terminal mode and none terminal exist, then create a new terminal
   start_new_terminal_if_none_exist = true;
+
+  -- it's hard to find keys that both not used in neovim and shell
   keys = {
-    -- it's hard to find keys that both not used in neovim and shell
-    -- follow compromise solution
+
+    -- toggle between terminals and normal buffers
     toggle = "<C-t>",
+
+    -- switch to next terminal or normal buffer
     next_buffer_terminal = "<C-n>",
+
+    -- switch to previous terminal or normal buffer
     prev_buffer_terminal = "<C-p>",
+
+    -- add a terminal
     add_terminal = "<F12>",
+
+    -- add a terminal vertically split
     add_terminal_vertical_split = "<C-F12>",
-    set_terminal_name = "<C-s>",
-    visual_mode_send_to_terminal = "s", -- visual mode map
+
+    -- set terminal name
+    terminal_mode_set_terminal_name = "<C-s>",
+
+    -- visual mode map send selected text to terminal, stay in current buffer
+    visual_mode_send_to_terminal = "s", 
+
+    -- visual mode map send selected text to terminal, then switch to that terminal
+    visual_mode_send_to_terminal_and_switch = "<C-s>",
   }
 }
 M.options = {}
@@ -553,14 +571,21 @@ M.send_to_terminal = function(switch_to_terminal)
   --   -- one line
   --   line_text = vim.fn.strcharpart(vim.fn.getline(line_start), col_start-1, col_end-col_start+1) .. "\n"
   -- else
-    line_text = table.concat(vim.fn.getline(line_start, line_end), "\n") .. "\n"
+  --   line_text = table.concat(vim.fn.getline(line_start, line_end), "\n") .. "\n"
+  -- end
+  line_text = table.concat(vim.fn.getline(line_start, line_end), "\n") .. "\n"
+  -- print(line_text)
+  vim.api.nvim_chan_send(terminal_chan_id, line_text)
+
+  notify("Terminal send", line_text)
+
+  -- for i, line in ipairs(vim.fn.getline(line_start, line_end)) do
+  --   local cmd_text = line .. "\n"
+  --   vim.schedule(function() vim.api.nvim_chan_send(terminal_chan_id, cmd_text) end)
   -- end
 
-  -- print(line_text)
-
-  vim.api.nvim_chan_send(terminal_chan_id, line_text)
   if switch_to_terminal then
-    do_switch_buffer(terminal_buf_id)
+    do_switch_terminal(terminal_buf_id)
   end
 end
 
@@ -617,13 +642,16 @@ M.setup = function(opt)
   set_keymap('n', M.options.keys.prev_buffer_terminal,
     '<cmd>lua require("tomatoterm").switch_to_buffer_terminal(false)<cr>', keymap_options)
 
-  set_keymap('t', M.options.keys.set_terminal_name,
+  set_keymap('t', M.options.keys.terminal_mode_set_terminal_name,
     '<cmd>lua require("tomatoterm").set_terminal_name()<cr>', keymap_options)
 
   set_keymap('t', M.options.keys.add_terminal_vertical_split,
     '<C-\\><C-N><cmd>keepalt rightbelow vsplit term://bash<CR>', keymap_options)
 
   set_keymap('v', M.options.keys.visual_mode_send_to_terminal,
+    '<cmd>lua require("tomatoterm").send_to_terminal(false)<cr><esc>', keymap_options)
+
+  set_keymap('v', M.options.keys.visual_mode_send_to_terminal_and_switch,
     '<cmd>lua require("tomatoterm").send_to_terminal(true)<cr>', keymap_options)
 
   vim.api.nvim_create_user_command('TermSetName', function(opts)
