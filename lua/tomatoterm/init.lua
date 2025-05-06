@@ -404,11 +404,11 @@ M.send_to_terminal = function(switch_to_terminal)
       local term = {}
       term.term_no = vim.fn.getbufvar(buf, "term_no", -1)
       term.term_name = vim.fn.getbufvar(buf, "term_name", "null")
-      print("send_to_terminal term_no:" .. term.term_no .. " term_name:" .. term.term_name)
+      --print("send_to_terminal term_no:" .. term.term_no .. " term_name:" .. term.term_name)
 
       term.buf_id = vim.fn.bufnr(buf)
       term.job_id = vim.fn.getbufvar(buf, "terminal_job_id", 0)
-      print("send_to_terminal buf_id:" .. term.buf_id .. " job_id:" .. term.job_id)
+      --print("send_to_terminal buf_id:" .. term.buf_id .. " job_id:" .. term.job_id)
 
       term.cwd = get_term_process_cwd(term.job_id)
       term.process_name = get_term_process_name(term.job_id)
@@ -428,41 +428,67 @@ M.send_to_terminal = function(switch_to_terminal)
   local terminal_buf_id = -1
   if #terminals > 1 then
     -- let user select which terminal to send to
+    local prompt = {}
+    local index = 1
+    table.insert(prompt, "Select which terminal to send to:")
     
     local options = {}
     local option_chan_id = {}
     local option_buf_id = {}
     for _, term in ipairs(terminals) do
-      local str = term.job_id .. " " .. term.process_name .. " " .. term.cwd
+      local str = ""
+
+      -- str = "" .. index .. ": " .. term.job_id .. " " .. term.process_name .. " " .. term.cwd
+      str = "" .. index .. ": "
       
-      if term.term_no ~= -1 then
-        str = str .. " " .. term.term_no
+      if term.term_no ~= -1 or term.term_name ~= "null" then
+        str = str .. "[ Terminal"
+        if term.term_no ~= -1 then
+          str = str .. " " .. term.term_no
+        end
+
+        if term.term_name ~= "null" then
+          str = str .. " " .. term.term_name
+        end
+        str = str .. "]"
       end
 
-      if term.term_name ~= "null" then
-        str = str .. " " .. term.term_name
-      end
+      str = str .. " " .. term.process_name .. " " .. term.cwd
 
-      option_chan_id.str = term.job_id
-      option_buf_id.str = term.buf_id
+      table.insert(prompt, str)
+
+      index = index + 1
+      -- option_chan_id.str = term.job_id
+      -- option_buf_id.str = term.buf_id
     end
 
-    -- local select = vim.fn.inputlist(options)
-    -- print("select: " .. select)
+    local select = vim.fn.inputlist(prompt)
+    if select <= 0 then
+      return
+    end
+
+    --print("select: " .. select)
+    local select_term = terminals[select]
+    terminal_chan_id = select_term.job_id
+    terminal_buf_id = select_term.buf_id
+
+    -- vim.ui.select(options, {
+    --   prompt = 'please select one terminal to send to:'
+    -- }, function(choice)
+    --     terminal_chan_id = option_chan_id.choice
+    --     terminal_buf_id = option_buf_id.choice
+    --   end)
     -- terminal_chan_id = option_chan_id[select]
     -- terminal_buf_id = option_buf_id[select]
-    vim.ui.select(options, {
-      prompt = 'please select one terminal to send to:'
-    }, function(choice)
-        terminal_chan_id = option_chan_id.choice
-        terminal_buf_id = option_buf_id.choice
-      end)
   else
     terminal_chan_id = terminals[1].job_id
     terminal_buf_id = terminals[1].buf_id
   end
 
-  print("terminal_chan_id: " .. terminal_chan_id .. " terminal_buf_id: " .. terminal_buf_id)
+  --print("terminal_chan_id: " .. terminal_chan_id .. " terminal_buf_id: " .. terminal_buf_id)
+  if terminal_chan_id == -1 or terminal_buf_id == -1 then
+    print("invalid terminal_buf_id or terminal_chan_id")
+  end
 
   --terminal_chans = {}
   --for _, chan in pairs(vim.api.nvim_list_chans()) do
@@ -519,8 +545,8 @@ M.send_to_terminal = function(switch_to_terminal)
     col_end = _col_end
   end
 
-  print("line start: " .. line_start .. " line_end: " .. line_end)
-  print("col start: " .. col_start .. " col_end: " .. col_end)
+  -- print("line start: " .. line_start .. " line_end: " .. line_end)
+  -- print("col start: " .. col_start .. " col_end: " .. col_end)
 
   local line_text=""
   -- if line_start == line_end then
@@ -530,7 +556,7 @@ M.send_to_terminal = function(switch_to_terminal)
     line_text = table.concat(vim.fn.getline(line_start, line_end), "\n") .. "\n"
   -- end
 
-  print(line_text)
+  -- print(line_text)
 
   vim.api.nvim_chan_send(terminal_chan_id, line_text)
   if switch_to_terminal then
