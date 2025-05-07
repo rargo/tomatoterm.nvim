@@ -121,21 +121,33 @@ end
 
 local function do_switch_terminal(bufnr, wrap)
   local terminal = M.terminals[bufnr]
-  local info = "Terminal"
+  local info = ""
   if terminal ~= nil then
-    local term_no = terminal.no
+    -- local term_no = terminal.no
     local job_id = terminal.job_id
 
-    info = info .. " " .. term_no
+    -- local process_name = get_term_process_name(job_id)
+    -- info = info .. "\n" .. "name: " .. process_name
 
-    local process_name = get_term_process_name(job_id)
-    info = info .. "\n" .. "name: " .. process_name
+    local ok, term_no = pcall(vim.api.nvim_buf_get_var, bufnr, "term_no")
+    if ok then
+      info = info ..  "id:  " .. term_no
+    end
+
+    local ok, term_name = pcall(vim.api.nvim_buf_get_var, bufnr, "term_name")
+    if ok then
+      info = info .. "\n" .. "name: " .. term_name
+    end
+
+    if term_name ~= nil then
+    end
 
     local pwd = get_term_process_cwd(job_id)
     info = info .. "\n" .. "pwd: " .. pwd
+
   else
     -- for those terminal opened on session restore, we don't have terminal variable available
-    info = info .. " bufnr:" .. bufnr
+    info = info .. "bufnr:" .. bufnr
   end
 
   if wrap ~= nil then
