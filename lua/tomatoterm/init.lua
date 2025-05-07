@@ -122,6 +122,7 @@ end
 local function do_switch_terminal(bufnr, wrap)
   local terminal = M.terminals[bufnr]
   local info = ""
+  local title = ""
   if terminal ~= nil then
     -- local term_no = terminal.no
     local job_id = terminal.job_id
@@ -131,35 +132,47 @@ local function do_switch_terminal(bufnr, wrap)
 
     local ok, term_no = pcall(vim.api.nvim_buf_get_var, bufnr, "term_no")
     if ok then
-      info = info ..  "id:  " .. term_no
+      title = title .. "** " .. term_no
+      -- info = info ..  "id:  " .. term_no
     end
 
     local ok, term_name = pcall(vim.api.nvim_buf_get_var, bufnr, "term_name")
     if ok then
-      info = info .. "\n" .. "name: " .. term_name
+      title = title .. " " .. term_name
+      --info = info .. "\n" .. "name: " .. term_name
+    end
+
+    if title ~= "" then
+      title = title .. " ** Terminal Switch "
     end
 
     if term_name ~= nil then
     end
 
     local pwd = get_term_process_cwd(job_id)
-    info = info .. "\n" .. "pwd: " .. pwd
+    --info = info .. "\n" .. "pwd: " .. pwd
+    info = info .. "  pwd: " .. pwd
 
   else
     -- for those terminal opened on session restore, we don't have terminal variable available
-    info = info .. "bufnr:" .. bufnr
+    info = info .. "  bufnr: " .. bufnr
   end
 
   if wrap ~= nil then
     if wrap == "wrap_first" then
-      info = info .. "\n" .. "wrap to FIRST terminal"
+      info = info .. "\n\n" .. "  wrap to FIRST terminal"
     else 
       if wrap == "wrap_last" then
-        info = info .. "\n" .. "wrap to LAST terminal"
+        info = info .. "\n\n" .. "  wrap to LAST terminal"
       end
     end
   end
-  notify("Terminal Switch", info)
+
+  if title == "" then
+    title = "Terminal Switch"
+  end
+  notify(title, info)
+
   --terminal is also a buffer in neovim
   local wins = vim.fn.win_findbuf(bufnr)
   if #wins ~= 0 then
