@@ -14,30 +14,30 @@ M.default_options = {
 
   -- it's hard to find keys that both not used in neovim and shell
   keys = {
-
     -- toggle between terminals and normal buffers
     toggle = "<C-t>",
-
-    -- switch to next terminal or normal buffer
-    next_buffer_terminal = "<C-n>",
-
-    -- switch to previous terminal or normal buffer
-    prev_buffer_terminal = "<C-p>",
-
     -- add a terminal
     add_terminal = "<F12>",
-
     -- add a terminal vertically split
     add_terminal_vertical_split = "<C-F12>",
 
+    -- switch to next buffer
+    normal_mode_next_buffer = "<C-n>",
+    -- switch to previous buffer
+    normal_mode_prev_buffer = "<C-p>",
     -- set terminal name
-    terminal_mode_set_terminal_name = "<C-s>",
 
     -- visual mode map send selected text to terminal, stay in current buffer
     visual_mode_send_to_terminal = "s", 
-
     -- visual mode map send selected text to terminal, then switch to that terminal
     visual_mode_send_to_terminal_and_switch = "<C-s>",
+
+    -- switch to next terminal
+    terminal_mode_next_terminal = "<C-n>",
+    -- switch to previous terminal
+    terminal_mode_prev_terminal = "<C-p>",
+    -- set terminal name
+    terminal_mode_set_terminal_name = "<C-s>",
   }
 }
 M.options = {}
@@ -601,7 +601,7 @@ M.set_terminal_name = function()
   end
 end
 
-M.setup = function(opt)
+M.setup = function(options)
   M.options = vim.tbl_deep_extend("force", M.default_options, options or {})
 
   DP("tomatoterm setup")
@@ -625,20 +625,20 @@ M.setup = function(opt)
 
   set_keymap('t', M.options.keys.toggle, 
     '<C-\\><C-N><cmd>lua require("tomatoterm").toggle_buffer_terminal()<cr>', keymap_options)
-  set_keymap('t', M.options.keys.next_buffer_terminal,
+  set_keymap('t', M.options.keys.terminal_mode_next_terminal,
     '<C-\\><C-N><cmd>lua require("tomatoterm").switch_to_buffer_terminal(true)<cr>', keymap_options)
-  set_keymap('t', M.options.keys.prev_buffer_terminal,
+  set_keymap('t', M.options.keys.terminal_mode_prev_terminal,
     '<C-\\><C-N><cmd>lua require("tomatoterm").switch_to_buffer_terminal(false)<cr>', keymap_options)
 
   set_keymap('n', M.options.keys.toggle, 
     '<cmd>lua require("tomatoterm").toggle_buffer_terminal()<cr>', keymap_options)
-  set_keymap('n', M.options.keys.next_buffer_terminal,
+  set_keymap('n', M.options.keys.normal_mode_next_buffer,
     '<cmd>lua require("tomatoterm").switch_to_buffer_terminal(true)<cr>', keymap_options)
-  set_keymap('n', M.options.keys.prev_buffer_terminal,
+  set_keymap('n', M.options.keys.normal_mode_prev_buffer,
     '<cmd>lua require("tomatoterm").switch_to_buffer_terminal(false)<cr>', keymap_options)
 
   set_keymap('t', M.options.keys.terminal_mode_set_terminal_name,
-    '<cmd>lua require("tomatoterm").set_terminal_name()<cr>', keymap_options)
+    '<C-\\><C-N><cmd>lua require("tomatoterm").set_terminal_name()<cr>', keymap_options)
 
   set_keymap('t', M.options.keys.add_terminal_vertical_split,
     '<C-\\><C-N><cmd>keepalt rightbelow vsplit term://bash<CR>', keymap_options)
