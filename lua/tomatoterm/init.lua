@@ -22,10 +22,9 @@ M.default_options = {
     add_terminal_vertical_split = "<C-F12>",
 
     -- switch to next buffer
-    normal_mode_next_buffer = "<C-n>",
+    normal_mode_next_buffer = "<C-Left>",
     -- switch to previous buffer
-    normal_mode_prev_buffer = "<C-p>",
-    -- set terminal name
+    normal_mode_prev_buffer = "<C-Right>",
 
     -- visual mode map send selected text to terminal, stay in current buffer
     visual_mode_send_to_terminal = "s", 
@@ -33,9 +32,9 @@ M.default_options = {
     visual_mode_send_to_terminal_and_switch = "<C-s>",
 
     -- switch to next terminal
-    terminal_mode_next_terminal = "<C-n>",
+    terminal_mode_next_terminal = "<C-Left>",
     -- switch to previous terminal
-    terminal_mode_prev_terminal = "<C-p>",
+    terminal_mode_prev_terminal = "<C-Right>",
     -- set terminal name
     terminal_mode_set_terminal_name = "<C-s>",
   }
