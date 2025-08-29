@@ -29,21 +29,25 @@ Switch terminal
 
 ## Default Keymaps
 
-Terminal and normal mode:
+Terminal mode:
 
 - <C-t\>:  toggle between terminal and non-terminal buffer
-- <C-n\>:  switch to next terminal or non-terminal buffer
-- <C-p\>:  switch to previous terminal or non-terminal buffer
+- <C-Right\>:  switch to next terminal
+- <C-Left\>:  switch to previous terminal
 - <C-s\>:  set current terminal name
 - <F12\>:  add a terminal
 - <C-F12\>:  add a terminal in vertical split window
 
+Normal mode:
+
+- <C-t\>:  toggle between terminal and non-terminal buffer
+- <C-Right\>:  switch to next buffer
+- <C-Left\>:  switch to previous buffer
 
 Visual mode:
 
-- s: send visual select text to the first terminal
-
-Please note that it is difficult to find a keymap that is easy to use and does not conflict with neovim and your shell. The default keymap is most likely a personal setting. You can change the keymap as described in the following sections.
+- s: send visual select text to the first terminal, stay in current buffer
+- <C-s>: send visual select text to the first terminal, and switch to the terminal
 
 ## Bufexplorer Keymaps
 
@@ -51,7 +55,7 @@ Add the following keymap for terminal buffers and non-terminal buffers selecting
 
 ```
 vim.api.nvim_set_keymap('n', '<C-b>', '<cmd>BufExplorer<cr>', {noremap = true, silent = true})
-vim.api.nvim_set_keymap('t', '<C-b>', '<C-\\><C-N><cmd>TerminalExplorer<cr>', {noremap = true, silent = true})
+vim.api.nvim_set_keymap('t', '<C-^>', '<C-\\><C-N><cmd>TerminalExplorer<cr>', {noremap = true, silent = true})
 ```
 
 ## Installation
@@ -71,7 +75,7 @@ Use default keymaps
 require("tomatoterm").setup()
 ```
 
-Modify keymaps, change those `somekey` to real key,  
+Below is default keymaps, change them to other keymap if you like,
 If you don't want to use some keymap, just set them to false.
 
 ```lua
@@ -79,13 +83,29 @@ require("tomatoterm").setup({
   start_new_terminal_if_none_exist = true; -- if no termial exist, set this option to true will start a new terminal, 
                                            -- Default is true
   keys = {
-    toggle = "somekey", -- toggle between terminal and normal buffer
-    next_buffer_terminal = "somekey", -- switch to next terminal or normal buffer
-    prev_buffer_terminal = "somekey", -- switch to previous terminal or normal buffer
-    add_terminal = "somekey", -- add a new terminal
-    add_terminal_vertical_split = "somekey", -- add a new terminal in vertical split window
-    set_terminal_name = "somekey", -- set current terminal name
-    visual_mode_send_to_terminal = "somekey", -- visual mode map: send visual select text to the first terminal
+    -- toggle between terminals and normal buffers
+    toggle = "<C-t>",
+    -- add a terminal
+    add_terminal = "<F12>",
+    -- add a terminal vertically split
+    add_terminal_vertical_split = "<C-F12>",
+
+    -- switch to next buffer
+    normal_mode_next_buffer = "<C-Left>",
+    -- switch to previous buffer
+    normal_mode_prev_buffer = "<C-Right>",
+
+    -- visual mode map send selected text to terminal, stay in current buffer
+    visual_mode_send_to_terminal = "s", 
+    -- visual mode map send selected text to terminal, then switch to that terminal
+    visual_mode_send_to_terminal_and_switch = "<C-s>",
+
+    -- switch to next terminal
+    terminal_mode_next_terminal = "<C-Left>",
+    -- switch to previous terminal
+    terminal_mode_prev_terminal = "<C-Right>",
+    -- set terminal name
+    terminal_mode_set_terminal_name = "<C-s>",
   }
 })
 ```
