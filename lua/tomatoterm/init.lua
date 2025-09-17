@@ -563,7 +563,10 @@ M.send_to_terminal = function(switch_to_terminal)
   -- else
   --   line_text = table.concat(vim.fn.getline(line_start, line_end), "\n") .. "\n"
   -- end
-  line_text = table.concat(vim.fn.getline(line_start, line_end), "\n") .. "\n"
+  for i, line in ipairs(vim.fn.getline(line_start, line_end)) do
+    line_text = line_text .. string.gsub(line, "^\t+","") .. "\n"
+  end
+  -- line_text = table.concat(vim.fn.getline(line_start, line_end), "\n") .. "\n"
   -- print(line_text)
   vim.api.nvim_chan_send(terminal_chan_id, line_text)
 
