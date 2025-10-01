@@ -80,32 +80,38 @@ If you don't want to use some keymap, just set them to false.
 
 ```lua
 require("tomatoterm").setup({
-  start_new_terminal_if_none_exist = true; -- if no termial exist, set this option to true will start a new terminal, 
-                                           -- Default is true
   keys = {
-    -- toggle between terminals and normal buffers
-    toggle = "<C-t>",
-    -- add a terminal
-    add_terminal = "<F12>",
-    -- add a terminal vertically split
-    add_terminal_vertical_split = "<C-F12>",
+    common = {
+      -- toggle between terminals and normal buffers
+      toggle = "<C-t>",
+      -- add a terminal
+      add_terminal = "<F12>",
+      -- add a terminal vertically split
+      add_terminal_vertical_split = "<C-F12>",
+    },
 
-    -- switch to next buffer
-    normal_mode_next_buffer = "<C-Left>",
-    -- switch to previous buffer
-    normal_mode_prev_buffer = "<C-Right>",
+    normal_mode = {
+      -- switch to next buffer
+      next_buffer = "<C-Left>",
+      -- switch to previous buffer
+      prev_buffer = "<C-Right>",
+    },
 
-    -- visual mode map send selected text to terminal, stay in current buffer
-    visual_mode_send_to_terminal = "s", 
-    -- visual mode map send selected text to terminal, then switch to that terminal
-    visual_mode_send_to_terminal_and_switch = "<C-s>",
+    visual_mode = {
+      -- visual mode map send selected text to terminal, stay in current buffer
+      send_to_terminal = "s", 
+      -- visual mode map send selected text to terminal, then switch to that terminal
+      send_to_terminal_and_switch = "<C-s>",
+    },
 
-    -- switch to next terminal
-    terminal_mode_next_terminal = "<C-Left>",
-    -- switch to previous terminal
-    terminal_mode_prev_terminal = "<C-Right>",
-    -- set terminal name
-    terminal_mode_set_terminal_name = "<C-s>",
+    terminal_mode = {
+      -- switch to next terminal
+      next_terminal = "<C-Left>",
+      -- switch to previous terminal
+      prev_terminal = "<C-Right>",
+      -- set terminal name
+      set_terminal_name = "<C-s>",
+    },
   }
 })
 ```

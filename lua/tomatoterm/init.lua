@@ -14,29 +14,37 @@ M.default_options = {
 
   -- it's hard to find keys that both not used in neovim and shell
   keys = {
-    -- toggle between terminals and normal buffers
-    toggle = "<C-t>",
-    -- add a terminal
-    add_terminal = "<F12>",
-    -- add a terminal vertically split
-    add_terminal_vertical_split = "<C-F12>",
+    common = {
+      -- toggle between terminals and normal buffers
+      toggle = "<C-t>",
+      -- add a terminal
+      add_terminal = "<F12>",
+      -- add a terminal vertically split
+      add_terminal_vertical_split = "<C-F12>",
+    },
 
-    -- switch to next buffer
-    normal_mode_next_buffer = "<C-Left>",
-    -- switch to previous buffer
-    normal_mode_prev_buffer = "<C-Right>",
+    normal_mode = {
+      -- switch to next buffer
+      next_buffer = "<C-Left>",
+      -- switch to previous buffer
+      prev_buffer = "<C-Right>",
+    },
 
-    -- visual mode map send selected text to terminal, stay in current buffer
-    visual_mode_send_to_terminal = "s", 
-    -- visual mode map send selected text to terminal, then switch to that terminal
-    visual_mode_send_to_terminal_and_switch = "<C-s>",
+    visual_mode = {
+      -- visual mode map send selected text to terminal, stay in current buffer
+      send_to_terminal = "s", 
+      -- visual mode map send selected text to terminal, then switch to that terminal
+      send_to_terminal_and_switch = "<C-s>",
+    },
 
-    -- switch to next terminal
-    terminal_mode_next_terminal = "<C-Left>",
-    -- switch to previous terminal
-    terminal_mode_prev_terminal = "<C-Right>",
-    -- set terminal name
-    terminal_mode_set_terminal_name = "<C-s>",
+    terminal_mode = {
+      -- switch to next terminal
+      next_terminal = "<C-Left>",
+      -- switch to previous terminal
+      prev_terminal = "<C-Right>",
+      -- set terminal name
+      set_terminal_name = "<C-s>",
+    },
   }
 }
 M.options = {}
@@ -611,44 +619,41 @@ M.setup = function(options)
   au({'TermLeave'}, 'term://*', OnTermLeave)
   au({'BufEnter'}, '*', OnBufEnter)
 
-  -- <C-a> add a terminal
-  set_keymap('t', M.options.keys.add_terminal,
-    '<C-\\><C-N><cmd>keepalt terminal<CR>', keymap_options)
-  -- <C-v> add a terminal vertical split
-  set_keymap('t', M.options.keys.add_terminal_vertical_split,
-    '<C-\\><C-N><cmd>keepalt rightbelow vsplit term://bash<CR>', keymap_options)
+  set_keymap('t', M.options.keys.common.toggle, 
+    '<C-\\><C-N><cmd>lua require("tomatoterm").toggle_buffer_terminal()<cr>', keymap_options)
+  set_keymap('n', M.options.keys.common.toggle, 
+    '<cmd>lua require("tomatoterm").toggle_buffer_terminal()<cr>', keymap_options)
 
-  -- <C-a> add a terminal
-  set_keymap('n', M.options.keys.add_terminal,
+  -- add a terminal
+  set_keymap('t', M.options.keys.common.add_terminal,
+    '<C-\\><C-N><cmd>keepalt terminal<CR>', keymap_options)
+  -- add a terminal
+  set_keymap('n', M.options.keys.common.add_terminal,
     '<cmd>keepalt terminal<CR>', keymap_options)
-  -- <C-v> add a terminal vertical split
-  set_keymap('n', M.options.keys.add_terminal_vertical_split,
+
+  -- add a terminal vertical split
+  set_keymap('t', M.options.keys.common.add_terminal_vertical_split,
+    '<C-\\><C-N><cmd>keepalt rightbelow vsplit term://bash<CR>', keymap_options)
+  -- add a terminal vertical split
+  set_keymap('n', M.options.keys.common.add_terminal_vertical_split,
     '<cmd>keepalt rightbelow vsplit term://bash<CR>', keymap_options)
 
-  set_keymap('t', M.options.keys.toggle, 
-    '<C-\\><C-N><cmd>lua require("tomatoterm").toggle_buffer_terminal()<cr>', keymap_options)
-  set_keymap('t', M.options.keys.terminal_mode_next_terminal,
+  set_keymap('t', M.options.keys.terminal_mode.next_terminal,
     '<C-\\><C-N><cmd>lua require("tomatoterm").switch_to_buffer_terminal(true)<cr>', keymap_options)
-  set_keymap('t', M.options.keys.terminal_mode_prev_terminal,
+  set_keymap('t', M.options.keys.terminal_mode.prev_terminal,
     '<C-\\><C-N><cmd>lua require("tomatoterm").switch_to_buffer_terminal(false)<cr>', keymap_options)
 
-  set_keymap('n', M.options.keys.toggle, 
-    '<cmd>lua require("tomatoterm").toggle_buffer_terminal()<cr>', keymap_options)
-  set_keymap('n', M.options.keys.normal_mode_next_buffer,
-    '<cmd>lua require("tomatoterm").switch_to_buffer_terminal(true)<cr>', keymap_options)
-  set_keymap('n', M.options.keys.normal_mode_prev_buffer,
-    '<cmd>lua require("tomatoterm").switch_to_buffer_terminal(false)<cr>', keymap_options)
-
-  set_keymap('t', M.options.keys.terminal_mode_set_terminal_name,
+  set_keymap('t', M.options.keys.terminal_mode.set_terminal_name,
     '<C-\\><C-N><cmd>lua require("tomatoterm").set_terminal_name()<cr>', keymap_options)
 
-  set_keymap('t', M.options.keys.add_terminal_vertical_split,
-    '<C-\\><C-N><cmd>keepalt rightbelow vsplit term://bash<CR>', keymap_options)
+  set_keymap('n', M.options.keys.normal_mode.next_buffer,
+    '<cmd>lua require("tomatoterm").switch_to_buffer_terminal(true)<cr>', keymap_options)
+  set_keymap('n', M.options.keys.normal_mode.prev_buffer,
+    '<cmd>lua require("tomatoterm").switch_to_buffer_terminal(false)<cr>', keymap_options)
 
-  set_keymap('v', M.options.keys.visual_mode_send_to_terminal,
+  set_keymap('v', M.options.keys.visual_mode.send_to_terminal,
     '<cmd>lua require("tomatoterm").send_to_terminal(false)<cr>', keymap_options)
-
-  set_keymap('v', M.options.keys.visual_mode_send_to_terminal_and_switch,
+  set_keymap('v', M.options.keys.visual_mode.send_to_terminal_and_switch,
     '<cmd>lua require("tomatoterm").send_to_terminal(true)<cr>', keymap_options)
 
   vim.api.nvim_create_user_command('TermSetName', function(opts)
