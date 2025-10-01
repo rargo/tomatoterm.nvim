@@ -49,7 +49,7 @@ Normal mode:
 Visual mode:
 
 - s: send visual select text to the first terminal, stay in current buffer
-- <C-s>: send visual select text to the first terminal, and switch to the terminal
+- <C-s\>: send visual select text to the first terminal, and switch to the terminal
 
 ## Bufexplorer Keymaps
 
