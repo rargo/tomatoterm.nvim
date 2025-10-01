@@ -29,18 +29,20 @@ Switch terminal
 
 ## Default Keymaps
 
-Terminal mode:
+All modes:
 
 - <C-t\>:  toggle between terminal and non-terminal buffer
-- <C-Right\>:  switch to next terminal
-- <C-Left\>:  switch to previous terminal
-- <C-s\>:  set current terminal name
 - <F12\>:  add a terminal
 - <C-F12\>:  add a terminal in vertical split window
 
+Terminal mode:
+
+- <C-Right\>:  switch to next terminal
+- <C-Left\>:  switch to previous terminal
+- <C-s\>:  set current terminal name
+
 Normal mode:
 
-- <C-t\>:  toggle between terminal and non-terminal buffer
 - <C-Right\>:  switch to next buffer
 - <C-Left\>:  switch to previous buffer
 
